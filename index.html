@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KDee Enterprise — Luxury & Timeless Fashion</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Three.js for 3D Hero Canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #121212;
+      --accent: #d4af37;
+      --accent-hover: #b59226;
+      --bg-light: #faf9f6;
+      --text-dark: #1e1e1e;
+      --text-muted: #666666;
+      --card-bg: #ffffff;
+      --border-color: #eaeaea;
+      --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+      --transition: all 0.3s ease;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-light); color: var(--text-dark); overflow-x: hidden; }
+    a { text-decoration: none; color: inherit; }
+
+    .top-bar {
+      background: var(--primary); color: #ffffff; font-size: 0.8rem;
+      letter-spacing: 1px; text-transform: uppercase; text-align: center;
+      padding: 8px 15px; font-weight: 500;
+    }
+
+    .navbar {
+      display: flex; justify-content: space-between; align-items: center; padding: 20px 5%;
+      background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+      position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border-color);
+    }
+    .brand-logo { font-family: 'Cinzel', serif; font-size: 1.6rem; font-weight: 700; letter-spacing: 2px; color: var(--primary); }
+    .brand-logo span { color: var(--accent); }
+    .nav-links { display: flex; gap: 30px; }
+    .nav-links a { font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; transition: var(--transition); }
+    .nav-links a:hover { color: var(--accent); }
+
+    .icon-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; position: relative; color: var(--primary); }
+    .cart-badge {
+      position: absolute; top: -8px; right: -10px; background: var(--accent); color: #fff;
+      font-size: 0.7rem; font-weight: 700; width: 18px; height: 18px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .hero-section {
+      position: relative; height: 70vh; display: flex; align-items: center; justify-content: center;
+      overflow: hidden; background: #0a0a0a; color: #ffffff;
+    }
+    #hero-3d-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+    .hero-content { position: relative; z-index: 2; text-align: center; max-width: 700px; padding: 0 20px; }
+    .hero-tagline { font-family: 'Cinzel', serif; font-size: 1rem; color: var(--accent); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px; display: block; }
+    .hero-content h1 { font-family: 'Cinzel', serif; font-size: 3.2rem; font-weight: 700; line-height: 1.1; margin-bottom: 20px; }
+    .hero-content p { font-size: 1.1rem; color: #cccccc; margin-bottom: 30px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px; padding: 14px 32px;
+      font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px;
+      border-radius: 2px; cursor: pointer; transition: var(--transition); border: 1px solid transparent;
+    }
+    .btn-primary { background: var(--accent); color: #ffffff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    .section-container { padding: 80px 5%; }
+    .section-header { text-align: center; margin-bottom: 50px; }
+    .section-header h2 { font-family: 'Cinzel', serif; font-size: 2.2rem; margin-bottom: 10px; }
+
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 30px; }
+    .product-card {
+      background: var(--card-bg); border-radius: 4px; overflow: hidden;
+      border: 1px solid var(--border-color); transition: var(--transition);
+      display: flex; flex-direction: column;
+    }
+    .product-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-5px); }
+    .product-img-wrapper { position: relative; width: 100%; height: 320px; overflow: hidden; background: #f0f0f0; cursor: pointer; }
+    .product-img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+    .product-card:hover .product-img-wrapper img { transform: scale(1.05); }
+    .badge { position: absolute; top: 12px; left: 12px; background: var(--primary); color: #fff; font-size: 0.7rem; padding: 4px 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+    .badge.out-of-stock { background: #d9534f; }
+    .product-info { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .product-info h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; }
+    .product-price { font-size: 1.1rem; font-weight: 700; color: var(--accent); margin-bottom: 15px; }
+
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(5px);
+      z-index: 2000; display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: var(--transition);
+    }
+    .modal-overlay.active { opacity: 1; pointer-events: auto; }
+    .modal-box { background: #ffffff; width: 90%; max-width: 850px; border-radius: 6px; overflow: hidden; position: relative; }
+    .close-btn { position: absolute; top: 15px; right: 20px; font-size: 1.8rem; background: none; border: none; cursor: pointer; z-index: 10; color: var(--primary); }
+    .modal-grid { display: grid; grid-template-columns: 1fr 1fr; }
+    @media(max-width: 768px) { .modal-grid { grid-template-columns: 1fr; } }
+    
+    .slideshow-container { position: relative; height: 420px; background: #000; }
+    .slideshow-container img { width: 100%; height: 100%; object-fit: cover; }
+    .slide-nav {
+      position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.85);
+      border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1rem;
+      display: flex; align-items: center; justify-content: center; z-index: 5;
+    }
+    .slide-nav:hover { background: #ffffff; }
+    .prev-slide { left: 15px; }
+    .next-slide { right: 15px; }
+    .slide-counter { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); color: #fff; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; }
+    .modal-info { padding: 35px; display: flex; flex-direction: column; justify-content: center; }
+    .modal-info h2 { font-family: 'Cinzel', serif; font-size: 1.6rem; margin-bottom: 10px; }
+    .modal-price { font-size: 1.3rem; font-weight: 700; color: var(--accent); margin-bottom: 10px; }
+    .stock-badge { font-size: 0.85rem; color: #2e7d32; font-weight: 600; margin-bottom: 15px; }
+    .modal-info p { color: var(--text-muted); margin-bottom: 25px; line-height: 1.6; font-size: 0.9rem; }
+
+    .cart-drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1500; opacity: 0; pointer-events: none; transition: var(--transition); }
+    .cart-drawer-overlay.active { opacity: 1; pointer-events: auto; }
+    .cart-drawer {
+      position: fixed; top: 0; right: -400px; width: 100%; max-width: 400px; height: 100vh;
+      background: #ffffff; z-index: 1600; transition: var(--transition); display: flex; flex-direction: column; box-shadow: var(--shadow-lg);
+    }
+    .cart-drawer.open { right: 0; }
+    .cart-header { padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+    .cart-body { padding: 20px; flex-grow: 1; overflow-y: auto; }
+    .cart-item-row { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; }
+    .cart-item-row img { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; }
+    .cart-item-details { flex-grow: 1; }
+    .cart-item-details h4 { font-size: 0.9rem; margin-bottom: 4px; }
+    .cart-item-price { font-weight: 700; color: var(--accent); font-size: 0.85rem; }
+    .remove-cart-item { background: none; border: none; color: #d9534f; cursor: pointer; font-size: 1.1rem; }
+    .cart-footer { padding: 20px; border-top: 1px solid var(--border-color); background: #fafafa; }
+    .cart-total-row { display: flex; justify-content: space-between; font-weight: 700; font-size: 1.2rem; margin-bottom: 20px; }
+    .checkout-fields input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 4px; font-family: inherit; }
+    .btn-whatsapp { background: #25D366; color: #fff; width: 100%; justify-content: center; }
+    .btn-whatsapp:hover { background: #1eb956; }
+
+    .footer { background: var(--primary); color: #888888; text-align: center; padding: 40px 5%; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">✨ Express Delivery Nationwide Across Ghana | Exclusive Offers on New Arrivals</div>
+
+  <header class="navbar">
+    <a href="#" class="brand-logo">KDee <span>Enterprise</span></a>
+    <nav class="nav-links">
+      <a href="#hero">Home</a>
+      <a href="#new-arrivals">New Arrivals</a>
+    </nav>
+    <button class="icon-btn" id="cart-drawer-btn">
+      <i class="fa-solid fa-bag-shopping"></i>
+      <span class="cart-badge" id="cart-badge">0</span>
+    </button>
+  </header>
+
+  <section class="hero-section" id="hero">
+    <canvas id="hero-3d-canvas"></canvas>
+    <div class="hero-content">
+      <span class="hero-tagline">Style Beyond Trends</span>
+      <h1>Fashion For A Brighter You.</h1>
+      <p>Timeless luxury apparel crafted for confidence and comfort.</p>
+      <a href="#new-arrivals" class="btn btn-primary">Shop Collection <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+  </section>
+
+  <section class="section-container" id="new-arrivals">
+    <div class="section-header">
+      <h2>New Arrivals</h2>
+      <p>Click any product image to view multi-angle slides</p>
+    </div>
+    <div id="product-grid" class="product-grid"></div>
+  </section>
+
+  <!-- Interactive Image Modal -->
+  <div class="modal-overlay" id="product-modal">
+    <div class="modal-box">
+      <button class="close-btn" id="close-modal">&times;</button>
+      <div class="modal-grid">
+        <div class="slideshow-container">
+          <img id="modal-slideshow-img" src="" alt="Product view">
+          <button class="slide-nav prev-slide" id="prev-slide"><i class="fa-solid fa-chevron-left"></i></button>
+          <button class="slide-nav next-slide" id="next-slide"><i class="fa-solid fa-chevron-right"></i></button>
+          <div class="slide-counter" id="slide-counter">1 / 1</div>
+        </div>
+        <div class="modal-info">
+          <h2 id="modal-title"></h2>
+          <div class="modal-price" id="modal-price"></div>
+          <div class="stock-badge" id="modal-stock"></div>
+          <p id="modal-description"></p>
+          <button class="btn btn-primary" id="modal-add-cart-btn">Add To Cart</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cart Drawer -->
+  <div class="cart-drawer-overlay" id="cart-drawer-overlay"></div>
+  <div class="cart-drawer" id="cart-drawer">
+    <div class="cart-header">
+      <h3>Your Shopping Bag</h3>
+      <button class="close-btn" id="close-cart-drawer">&times;</button>
+    </div>
+    <div class="cart-body" id="cart-items-container"></div>
+    <div class="cart-footer">
+      <div class="cart-total-row">
+        <span>Total:</span>
+        <span id="cart-total-price">GHS 0.00</span>
+      </div>
+      <div class="checkout-fields">
+        <input type="text" id="cust-name" placeholder="Full Name" required>
+        <input type="text" id="cust-address" placeholder="Delivery Location / City" required>
+      </div>
+      <button class="btn btn-whatsapp" id="whatsapp-checkout-btn">
+        <i class="fa-brands fa-whatsapp"></i> Order via WhatsApp
+      </button>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>&copy; 2026 KDee Enterprise. All Rights Reserved.</p>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
