@@ -7,7 +7,7 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#121212">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -101,6 +101,7 @@
     .form-group input, .form-group textarea {
       width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit;
     }
+    .form-group select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; background: #fff; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
     .btn-submit {
@@ -261,6 +262,20 @@
           </div>
         </div>
         <div class="form-group">
+          <label>Category</label>
+          <select id="p-category" required></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Wholesale Price (GHS)</label>
+            <input type="number" step="0.01" id="p-ws-price" placeholder="Optional">
+          </div>
+          <div class="form-group">
+            <label>Min. Bulk Qty</label>
+            <input type="number" id="p-ws-min" placeholder="e.g. 12">
+          </div>
+        </div>
+        <div class="form-group">
           <label>Product Description</label>
           <textarea id="p-desc" rows="3" placeholder="Fabric, fit details, sizing..."></textarea>
         </div>
@@ -310,6 +325,20 @@
           <div class="form-group">
             <label>Stock</label>
             <input type="number" id="e-stock" required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="e-category" required></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Wholesale Price (GHS)</label>
+            <input type="number" step="0.01" id="e-ws-price" placeholder="Optional">
+          </div>
+          <div class="form-group">
+            <label>Min. Bulk Qty</label>
+            <input type="number" id="e-ws-min" placeholder="e.g. 12">
           </div>
         </div>
         <div class="form-group">

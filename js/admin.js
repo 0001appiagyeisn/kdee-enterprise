@@ -27,6 +27,34 @@ let newFiles = [];     // File objects queued for upload
 
 const BUCKET = 'product-images';
 
+const CATEGORIES = [
+  { key: 'casual', label: 'Casual' },
+  { key: 'official', label: 'Official' },
+  { key: 'jeans', label: 'Jeans' },
+  { key: 'shirts', label: 'Shirts' },
+  { key: 'tshirts', label: 'T-Shirts' },
+  { key: 'shorts', label: 'Shorts' },
+  { key: 'trousers', label: 'Trousers' },
+  { key: 'jackets', label: 'Jackets' },
+  { key: 'accessories', label: 'Accessories' }
+];
+const normCat = (c) => (c === 'short_jeans' ? 'shorts' : (c || ''));
+const catLabel = (c) => (CATEGORIES.find((x) => x.key === normCat(c)) || {}).label || 'No category';
+
+['p-category', 'e-category'].forEach((id) => {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = '<option value="">Select category</option>' +
+    CATEGORIES.map((c) => `<option value="${c.key}">${c.label}</option>`).join('');
+});
+
+// Blank wholesale price = item not offered wholesale
+function readWholesale(priceId, minId) {
+  const price = parseFloat(document.getElementById(priceId).value);
+  const min = parseInt(document.getElementById(minId).value, 10);
+  if (isNaN(price) || price <= 0) return { wholesale_price: null, wholesale_min_qty: null };
+  return { wholesale_price: price, wholesale_min_qty: (isNaN(min) || min < 1) ? 10 : min };
+}
+
 // ---------- Helpers ----------
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, (c) => (
@@ -197,7 +225,7 @@ async function loadAdminInventory() {
       <img src="${escapeHtml(firstImg)}" alt="${escapeHtml(prod.name)}">
       <div class="stock-info">
         <h4>${escapeHtml(prod.name)}</h4>
-        <p>GHS ${Number(prod.price).toFixed(2)} | Images: ${images.length}</p>
+        <p>GHS ${Number(prod.price).toFixed(2)} | Images: ${images.length} | ${escapeHtml(catLabel(prod.category))}${Number(prod.wholesale_price) > 0 ? ' | Wholesale: GHS ' + Number(prod.wholesale_price).toFixed(2) + ' (min ' + (prod.wholesale_min_qty || 10) + ')' : ''}</p>
       </div>
       <div class="stock-controls">
         <input type="number" value="${prod.stock ?? 0}" class="input-stock" title="Current Stock">
@@ -292,6 +320,9 @@ function openEditModal(prod) {
   document.getElementById('e-price').value = prod.price ?? '';
   document.getElementById('e-stock').value = prod.stock ?? 0;
   document.getElementById('e-desc').value = prod.description || '';
+  document.getElementById('e-category').value = normCat(prod.category);
+  document.getElementById('e-ws-price').value = prod.wholesale_price ?? '';
+  document.getElementById('e-ws-min').value = prod.wholesale_min_qty ?? '';
   editImageInput.value = '';
 
   renderEditImages();
@@ -324,6 +355,8 @@ editForm?.addEventListener('submit', async (e) => {
   const price = parseFloat(document.getElementById('e-price').value);
   const stock = parseInt(document.getElementById('e-stock').value, 10);
   const description = document.getElementById('e-desc').value.trim();
+  const category = document.getElementById('e-category').value;
+  const wholesale = readWholesale('e-ws-price', 'e-ws-min');
 
   if (!name || isNaN(price) || isNaN(stock)) {
     alert('Please provide a valid name, price and stock.');
@@ -353,6 +386,8 @@ editForm?.addEventListener('submit', async (e) => {
         price,
         stock,
         description,
+        category,
+        ...wholesale,
         images: finalImages,
         image_url: finalImages[0]
       })
@@ -381,6 +416,8 @@ if (productForm) {
     const price = parseFloat(document.getElementById('p-price').value);
     const stock = parseInt(document.getElementById('p-stock').value, 10);
     const description = document.getElementById('p-desc').value.trim();
+    const category = document.getElementById('p-category').value;
+    const wholesale = readWholesale('p-ws-price', 'p-ws-min');
     const fileInput = document.getElementById('p-image-file');
     const files = fileInput.files;
 
@@ -424,6 +461,8 @@ if (productForm) {
         price,
         stock,
         description,
+        category,
+        ...wholesale,
         images: imageUrls,
         image_url: imageUrls[0]
       }]);

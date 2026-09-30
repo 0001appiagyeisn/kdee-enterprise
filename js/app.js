@@ -4,6 +4,25 @@ let products = [];
 let cart = [];
 let activeSlideshowImages = [];
 let currentSlideIndex = 0;
+let realtimeStarted = false;
+let activeCategory = 'all';
+let searchTerm = '';
+let wholesaleCart = [];
+
+const CATEGORIES = [
+  { key: 'all', label: 'All' },
+  { key: 'casual', label: 'Casual' },
+  { key: 'official', label: 'Official' },
+  { key: 'jeans', label: 'Jeans' },
+  { key: 'shirts', label: 'Shirts' },
+  { key: 'tshirts', label: 'T-Shirts' },
+  { key: 'shorts', label: 'Shorts' },
+  { key: 'trousers', label: 'Trousers' },
+  { key: 'jackets', label: 'Jackets' },
+  { key: 'accessories', label: 'Accessories' }
+];
+// Older items seeded as "short_jeans" show under Shorts
+const normCat = (c) => (c === 'short_jeans' ? 'shorts' : (c || ''));
 
 const productGrid = document.getElementById('product-grid');
 const cartBadge = document.getElementById('cart-badge');
@@ -93,8 +112,11 @@ async function loadProducts() {
 
   products = data || [];
   renderProducts();
+  renderWholesale();
 
-  // Supabase Realtime Subscription
+  // Supabase Realtime Subscription (start only once)
+  if (realtimeStarted) return;
+  realtimeStarted = true;
   supabase
     .channel('public:products')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
@@ -103,12 +125,79 @@ async function loadProducts() {
     .subscribe();
 }
 
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, (c) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
+function getImages(prod, fallback) {
+  if (prod.images && prod.images.length > 0) return prod.images;
+  if (prod.image_url) return [prod.image_url];
+  return [fallback || 'https://via.placeholder.com/300'];
+}
+
+// ---------- Categories & Search ----------
+function renderChips() {
+  const wrap = document.getElementById('category-chips');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  CATEGORIES.forEach((cat) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip' + (cat.key === activeCategory ? ' active' : '');
+    btn.textContent = cat.label;
+    btn.addEventListener('click', () => {
+      activeCategory = cat.key;
+      renderChips();
+      renderProducts();
+    });
+    wrap.appendChild(btn);
+  });
+}
+
+function bindSearch() {
+  const input = document.getElementById('search-input');
+  const runSearch = () => {
+    searchTerm = input.value.trim().toLowerCase();
+    renderProducts();
+  };
+  if (input) {
+    input.addEventListener('input', runSearch);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { runSearch(); productGrid?.scrollIntoView({ behavior: 'smooth' }); } });
+  }
+  document.getElementById('search-btn')?.addEventListener('click', () => {
+    runSearch();
+    productGrid?.scrollIntoView({ behavior: 'smooth' });
+  });
+  document.getElementById('search-nav-btn')?.addEventListener('click', () => {
+    document.getElementById('new-arrivals')?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => input?.focus(), 400);
+  });
+}
+
+function getFilteredProducts() {
+  return products.filter((p) => {
+    const cat = normCat(p.category);
+    if (activeCategory !== 'all' && cat !== activeCategory) return false;
+    if (!searchTerm) return true;
+    const label = (CATEGORIES.find((c) => c.key === cat) || {}).label || '';
+    return [p.name, p.description, label].join(' ').toLowerCase().includes(searchTerm);
+  });
+}
+
 function renderProducts() {
   if (!productGrid) return;
   productGrid.innerHTML = '';
 
-  products.forEach(prod => {
-    const images = prod.images && prod.images.length > 0 ? prod.images : (prod.image_url ? [prod.image_url] : ['https://via.placeholder.com/300']);
+  const list = getFilteredProducts();
+  if (list.length === 0) {
+    productGrid.innerHTML = '<p class="no-results">No products found. Try another category or search.</p>';
+    return;
+  }
+
+  list.forEach(prod => {
+    const images = getImages(prod);
     const primaryImg = images[0];
     const isOutOfStock = Number(prod.stock) <= 0;
 
@@ -116,12 +205,12 @@ function renderProducts() {
     card.className = 'product-card';
     card.innerHTML = `
       <div class="product-img-wrapper">
-        <img src="${primaryImg}" alt="${prod.name}">
+        <img src="${escapeHtml(primaryImg)}" alt="${escapeHtml(prod.name)}">
         ${isOutOfStock ? '<span class="badge out-of-stock">Out of Stock</span>' : '<span class="badge">New</span>'}
       </div>
       <div class="product-info">
         <div>
-          <h3>${prod.name}</h3>
+          <h3>${escapeHtml(prod.name)}</h3>
           <div class="product-price">GHS ${Number(prod.price).toFixed(2)}</div>
         </div>
         <button class="btn btn-primary add-to-cart-quick" ${isOutOfStock ? 'disabled' : ''}>
@@ -131,7 +220,7 @@ function renderProducts() {
     `;
 
     card.querySelector('.product-img-wrapper').addEventListener('click', () => openModal(prod));
-    
+
     const addBtn = card.querySelector('.add-to-cart-quick');
     if (addBtn && !isOutOfStock) {
       addBtn.addEventListener('click', (e) => {
@@ -143,6 +232,124 @@ function renderProducts() {
     productGrid.appendChild(card);
   });
 }
+
+// ---------- Wholesale ----------
+const wsMinQty = (p) => Math.max(parseInt(p.wholesale_min_qty, 10) || 10, 1);
+
+function renderWholesale() {
+  const grid = document.getElementById('wholesale-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const list = products.filter((p) => Number(p.wholesale_price) > 0);
+  if (list.length === 0) {
+    grid.innerHTML = '<p class="no-results">Wholesale items will be listed here soon. Message us on WhatsApp for bulk prices.</p>';
+    return;
+  }
+
+  list.forEach((prod) => {
+    const min = wsMinQty(prod);
+    const stock = Number(prod.stock) || 0;
+    const canOrder = stock >= min;
+
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    card.innerHTML = `
+      <div class="product-img-wrapper">
+        <img src="${escapeHtml(getImages(prod)[0])}" alt="${escapeHtml(prod.name)}">
+        <span class="badge">Wholesale</span>
+      </div>
+      <div class="product-info">
+        <div>
+          <h3>${escapeHtml(prod.name)}</h3>
+          <div class="product-price">GHS ${Number(prod.wholesale_price).toFixed(2)} <small>/ piece</small></div>
+          <div class="ws-min">Minimum order: ${min} pcs &middot; ${stock} in stock</div>
+        </div>
+        <div class="ws-controls">
+          <input type="number" class="ws-qty" min="${min}" max="${stock}" value="${min}" ${canOrder ? '' : 'disabled'}>
+          <button class="btn btn-primary ws-add" ${canOrder ? '' : 'disabled'}>${canOrder ? 'Add To Bulk Order' : 'Low Stock'}</button>
+        </div>
+      </div>
+    `;
+
+    card.querySelector('.ws-add').addEventListener('click', () => {
+      addToWholesale(prod, parseInt(card.querySelector('.ws-qty').value, 10));
+    });
+    grid.appendChild(card);
+  });
+}
+
+function addToWholesale(prod, qty) {
+  const min = wsMinQty(prod);
+  const stock = Number(prod.stock) || 0;
+  if (!qty || qty < min) return alert(`Minimum wholesale order for this item is ${min} pieces.`);
+
+  const existing = wholesaleCart.find((i) => i.id === prod.id);
+  const newQty = (existing ? existing.qty : 0) + qty;
+  if (newQty > stock) return alert(`Only ${stock} pieces are available in stock.`);
+
+  if (existing) existing.qty = newQty;
+  else wholesaleCart.push({ id: prod.id, name: prod.name, price: Number(prod.wholesale_price), img: getImages(prod)[0], qty: newQty });
+
+  updateWholesaleUI();
+  document.querySelector('.ws-order')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function updateWholesaleUI() {
+  const box = document.getElementById('ws-order-items');
+  const totalEl = document.getElementById('ws-total');
+  if (!box || !totalEl) return;
+  box.innerHTML = '';
+
+  if (wholesaleCart.length === 0) {
+    box.innerHTML = '<p class="ws-empty">No items yet. Add wholesale items above.</p>';
+    totalEl.textContent = 'GHS 0.00';
+    return;
+  }
+
+  let total = 0;
+  wholesaleCart.forEach((item) => {
+    const sum = item.price * item.qty;
+    total += sum;
+    const row = document.createElement('div');
+    row.className = 'cart-item-row';
+    row.innerHTML = `
+      <img src="${escapeHtml(item.img)}" alt="${escapeHtml(item.name)}">
+      <div class="cart-item-details">
+        <h4>${escapeHtml(item.name)}</h4>
+        <div class="cart-item-price">GHS ${item.price.toFixed(2)} x ${item.qty} = GHS ${sum.toFixed(2)}</div>
+      </div>
+      <button class="remove-cart-item">&times;</button>
+    `;
+    row.querySelector('.remove-cart-item').addEventListener('click', () => {
+      wholesaleCart = wholesaleCart.filter((c) => c.id !== item.id);
+      updateWholesaleUI();
+    });
+    box.appendChild(row);
+  });
+  totalEl.textContent = `GHS ${total.toFixed(2)}`;
+}
+
+document.getElementById('ws-checkout-btn')?.addEventListener('click', () => {
+  const name = document.getElementById('ws-name').value.trim();
+  const address = document.getElementById('ws-address').value.trim();
+
+  if (wholesaleCart.length === 0) return alert('Your bulk order is empty!');
+  if (!name || !address) return alert('Please fill in your name and delivery location!');
+
+  let msg = `*New WHOLESALE Order - KD Enterprise*\n\n`;
+  msg += `*Customer:* ${name}\n*Location:* ${address}\n\n*Items Ordered:*\n`;
+
+  let grand = 0;
+  wholesaleCart.forEach((item, idx) => {
+    const sum = item.price * item.qty;
+    grand += sum;
+    msg += `${idx + 1}. ${item.name} (${item.qty} pcs @ GHS ${item.price.toFixed(2)}) - GHS ${sum.toFixed(2)}\n`;
+  });
+  msg += `\n*Total Amount:* GHS ${grand.toFixed(2)}`;
+
+  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+});
 
 function openModal(prod) {
   activeSlideshowImages = prod.images && prod.images.length > 0 ? prod.images : (prod.image_url ? [prod.image_url] : ['https://via.placeholder.com/400']);
@@ -277,5 +484,8 @@ document.getElementById('whatsapp-checkout-btn')?.addEventListener('click', () =
 
 document.addEventListener('DOMContentLoaded', () => {
   init3DHero();
+  renderChips();
+  bindSearch();
+  updateWholesaleUI();
   loadProducts();
 });

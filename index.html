@@ -7,7 +7,7 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#121212">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -148,6 +148,39 @@
     .btn-whatsapp { background: #25D366; color: #fff; width: 100%; justify-content: center; }
     .btn-whatsapp:hover { background: #1eb956; }
 
+    .nav-icons { display: flex; align-items: center; gap: 20px; }
+    #new-arrivals, #wholesale, #product-grid { scroll-margin-top: 80px; }
+    .shop-toolbar { max-width: 900px; margin: 0 auto 35px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+    .search-box { display: flex; width: 100%; max-width: 520px; background: #fff; border: 1px solid var(--border-color); border-radius: 2px; overflow: hidden; }
+    .search-box input { flex: 1; border: none; outline: none; padding: 13px 16px; font-family: inherit; font-size: 0.9rem; }
+    .search-box button { background: var(--primary); color: #fff; border: none; padding: 0 20px; cursor: pointer; transition: var(--transition); }
+    .search-box button:hover { background: var(--accent); }
+    .category-chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .chip {
+      background: #fff; border: 1px solid var(--border-color); color: var(--text-dark); padding: 8px 18px;
+      font-family: inherit; font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+      border-radius: 20px; cursor: pointer; transition: var(--transition);
+    }
+    .chip:hover { border-color: var(--accent); color: var(--accent); }
+    .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .no-results { grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 40px 0; }
+    .wholesale-section { background: #ffffff; border-top: 1px solid var(--border-color); }
+    .ws-min { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px; }
+    .ws-controls { display: flex; gap: 10px; }
+    .ws-controls input { width: 80px; padding: 10px; text-align: center; border: 1px solid var(--border-color); border-radius: 2px; font-family: inherit; }
+    .ws-controls .btn { flex: 1; justify-content: center; padding: 12px 8px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .ws-order { max-width: 600px; margin: 50px auto 0; background: var(--bg-light); border: 1px solid var(--border-color); border-radius: 4px; padding: 25px; }
+    .ws-order h3 { font-size: 1.05rem; margin-bottom: 18px; display: flex; align-items: center; gap: 10px; }
+    .ws-empty { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 18px; }
+    @media(max-width: 600px) {
+      .navbar { padding: 15px 4%; }
+      .brand-logo { font-size: 1.2rem; }
+      .nav-links { gap: 14px; }
+      .nav-links a { font-size: 0.7rem; letter-spacing: 0.5px; }
+      .nav-icons { gap: 14px; }
+    }
+
     .footer { background: var(--primary); color: #888888; text-align: center; padding: 40px 5%; font-size: 0.85rem; }
   </style>
 </head>
@@ -160,11 +193,15 @@
     <nav class="nav-links">
       <a href="#hero">Home</a>
       <a href="#new-arrivals">New Arrivals</a>
+      <a href="#wholesale">Wholesale</a>
     </nav>
-    <button class="icon-btn" id="cart-drawer-btn">
+    <div class="nav-icons">
+      <button class="icon-btn" id="search-nav-btn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+      <button class="icon-btn" id="cart-drawer-btn">
       <i class="fa-solid fa-bag-shopping"></i>
       <span class="cart-badge" id="cart-badge">0</span>
-    </button>
+      </button>
+    </div>
   </header>
 
   <section class="hero-section" id="hero">
@@ -182,7 +219,38 @@
       <h2>New Arrivals</h2>
       <p>Click any product image to view multi-angle slides</p>
     </div>
+    <div class="shop-toolbar">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="Search shirts, jeans, shorts..." autocomplete="off">
+        <button type="button" id="search-btn" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+      </div>
+      <div class="category-chips" id="category-chips"></div>
+    </div>
     <div id="product-grid" class="product-grid"></div>
+  </section>
+
+  <!-- Wholesale / Bulk Orders -->
+  <section class="section-container wholesale-section" id="wholesale">
+    <div class="section-header">
+      <h2>Wholesale</h2>
+      <p>Buying in bulk? Enjoy special per-piece prices when you order the minimum quantity.</p>
+    </div>
+    <div id="wholesale-grid" class="product-grid"></div>
+    <div class="ws-order">
+      <h3><i class="fa-solid fa-boxes-packing"></i> Your Bulk Order</h3>
+      <div id="ws-order-items"></div>
+      <div class="cart-total-row">
+        <span>Total:</span>
+        <span id="ws-total">GHS 0.00</span>
+      </div>
+      <div class="checkout-fields">
+        <input type="text" id="ws-name" placeholder="Full Name / Business Name">
+        <input type="text" id="ws-address" placeholder="Delivery Location / City">
+      </div>
+      <button class="btn btn-whatsapp" id="ws-checkout-btn">
+        <i class="fa-brands fa-whatsapp"></i> Send Bulk Order via WhatsApp
+      </button>
+    </div>
   </section>
 
   <!-- Interactive Image Modal -->
