@@ -257,7 +257,7 @@ document.getElementById('whatsapp-checkout-btn')?.addEventListener('click', () =
   if (cart.length === 0) return alert('Your cart is empty!');
   if (!name || !address) return alert('Please fill in your name and address!');
 
-  let orderMessage = `*New Order - KDee Enterprise*\n\n`;
+  let orderMessage = `*New Order - KD Enterprise*\n\n`;
   orderMessage += `*Customer:* ${name}\n`;
   orderMessage += `*Location:* ${address}\n\n`;
   orderMessage += `*Items Ordered:*\n`;
