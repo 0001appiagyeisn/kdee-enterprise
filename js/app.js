@@ -217,7 +217,7 @@ function renderProducts() {
           <div class="product-price">GHS ${Number(prod.price).toFixed(2)}</div>
         </div>
         <button class="btn btn-primary add-to-cart-quick" ${isOutOfStock ? 'disabled' : ''}>
-          ${isOutOfStock ? 'Sold Out' : 'Choose Size'}
+          ${isOutOfStock ? 'Sold Out' : 'Add To Cart'}
         </button>
       </div>
     `;
@@ -228,7 +228,7 @@ function renderProducts() {
     if (addBtn && !isOutOfStock) {
       addBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        openModal(prod);
+        openSizeDialog(prod);
       });
     }
 
@@ -404,8 +404,8 @@ function closeModal() {
 }
 document.getElementById('close-modal')?.addEventListener('click', closeModal);
 
-function renderSizePicker() {
-  const box = document.getElementById('size-picker');
+function renderSizePicker(containerId = 'size-picker') {
+  const box = document.getElementById(containerId);
   if (!box) return;
   box.innerHTML = '';
   SIZES.forEach((size) => {
@@ -413,10 +413,34 @@ function renderSizePicker() {
     btn.type = 'button';
     btn.className = 'size-btn' + (size === selectedSize ? ' active' : '');
     btn.textContent = size;
-    btn.addEventListener('click', () => { selectedSize = size; renderSizePicker(); });
+    btn.addEventListener('click', () => { selectedSize = size; renderSizePicker(containerId); });
     box.appendChild(btn);
   });
 }
+
+// Step 2 of ordering: pick a size, then add to cart
+const sizeDialog = document.getElementById('size-dialog');
+
+function openSizeDialog(prod) {
+  selectedSize = '';
+  document.getElementById('size-dialog-img').src = getImages(prod)[0];
+  document.getElementById('size-dialog-name').textContent = prod.name;
+  document.getElementById('size-dialog-price').textContent = `GHS ${Number(prod.price).toFixed(2)}`;
+  renderSizePicker('size-dialog-picker');
+
+  document.getElementById('size-dialog-add').onclick = () => {
+    if (!selectedSize) return alert('Please select a size (L, XL, XXL or XXXL).');
+    if (addToCart(prod.id, selectedSize)) closeSizeDialog();
+  };
+
+  sizeDialog.classList.add('active');
+}
+
+function closeSizeDialog() {
+  sizeDialog.classList.remove('active');
+}
+document.getElementById('close-size-dialog')?.addEventListener('click', closeSizeDialog);
+sizeDialog?.addEventListener('click', (e) => { if (e.target === sizeDialog) closeSizeDialog(); });
 
 // Same product in a different size becomes its own cart line
 function addToCart(productId, size) {

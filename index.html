@@ -190,6 +190,11 @@
     }
     .size-btn:hover { border-color: var(--accent); }
     .size-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .size-box { background: #fff; width: 92%; max-width: 400px; border-radius: 6px; padding: 28px 25px 25px; position: relative; }
+    .size-prod { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; padding-right: 25px; }
+    .size-prod img { width: 72px; height: 72px; object-fit: cover; border-radius: 4px; background: #f0f0f0; }
+    .size-prod h3 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+    .size-prod .modal-price { margin-bottom: 0; font-size: 1.1rem; }
     .cart-item-size { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 3px; }
 
     .footer { background: var(--primary); color: #888888; text-align: center; padding: 40px 5%; font-size: 0.85rem; }
@@ -287,6 +292,23 @@
           <button class="btn btn-primary" id="modal-add-cart-btn">Add To Cart</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Size Selection Step -->
+  <div class="modal-overlay" id="size-dialog">
+    <div class="size-box">
+      <button class="close-btn" id="close-size-dialog">&times;</button>
+      <div class="size-prod">
+        <img id="size-dialog-img" src="" alt="Product">
+        <div>
+          <h3 id="size-dialog-name"></h3>
+          <div class="modal-price" id="size-dialog-price"></div>
+        </div>
+      </div>
+      <div class="size-label">Select Your Size</div>
+      <div class="size-picker" id="size-dialog-picker"></div>
+      <button class="btn btn-primary" id="size-dialog-add" style="width:100%; justify-content:center;">Add To Cart</button>
     </div>
   </div>
 
