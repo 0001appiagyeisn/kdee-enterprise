@@ -181,6 +181,17 @@
       .nav-links a { font-size: 0.72rem; letter-spacing: 0.5px; }
     }
 
+    .modal-box { max-height: 92vh; overflow-y: auto; }
+    .size-label { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+    .size-picker { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+    .size-btn {
+      min-width: 58px; padding: 10px 14px; background: #fff; border: 1px solid var(--border-color);
+      border-radius: 2px; font-family: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: var(--transition);
+    }
+    .size-btn:hover { border-color: var(--accent); }
+    .size-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .cart-item-size { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 3px; }
+
     .footer { background: var(--primary); color: #888888; text-align: center; padding: 40px 5%; font-size: 0.85rem; }
   </style>
 </head>
@@ -245,7 +256,9 @@
       </div>
       <div class="checkout-fields">
         <input type="text" id="ws-name" placeholder="Full Name / Business Name">
+        <input type="tel" id="ws-phone" placeholder="Phone Number (e.g. 0244123456)" required>
         <input type="text" id="ws-address" placeholder="Delivery Location / City">
+        <input type="text" id="ws-sizes" placeholder="Size breakdown, e.g. 6 L, 6 XL, 4 XXL (optional)">
       </div>
       <button class="btn btn-whatsapp" id="ws-checkout-btn">
         <i class="fa-brands fa-whatsapp"></i> Send Bulk Order via WhatsApp
@@ -269,6 +282,8 @@
           <div class="modal-price" id="modal-price"></div>
           <div class="stock-badge" id="modal-stock"></div>
           <p id="modal-description"></p>
+          <div class="size-label">Select Size</div>
+          <div class="size-picker" id="size-picker"></div>
           <button class="btn btn-primary" id="modal-add-cart-btn">Add To Cart</button>
         </div>
       </div>
@@ -290,6 +305,7 @@
       </div>
       <div class="checkout-fields">
         <input type="text" id="cust-name" placeholder="Full Name" required>
+        <input type="tel" id="cust-phone" placeholder="Phone Number (e.g. 0244123456)" required>
         <input type="text" id="cust-address" placeholder="Delivery Location / City" required>
       </div>
       <button class="btn btn-whatsapp" id="whatsapp-checkout-btn">

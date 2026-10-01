@@ -481,7 +481,7 @@ if (productForm) {
     const category = document.getElementById('p-category').value;
     const wholesale = readWholesale('p-ws-price', 'p-ws-min');
     const fileInput = document.getElementById('p-image-file');
-    const files = fileInput.files;
+    const files = pendingFiles;
 
     if (files.length === 0) {
       alert('Please select at least one product image.');
@@ -537,18 +537,43 @@ if (productForm) {
     } else {
       alert('Product uploaded successfully!');
       productForm.reset();
+      pendingFiles = [];
+      renderPendingImages();
+      if (aiStatus) aiStatus.textContent = '';
       loadAdminInventory();
     }
   });
 }
 
-// 7. AI buttons (Add form + Edit modal)
+// 7a. Add-form photo list with remove (x) buttons
+let pendingFiles = [];
+const pManager = document.getElementById('p-image-manager');
+
+function renderPendingImages() {
+  if (!pManager) return;
+  pManager.innerHTML = '';
+  pendingFiles.forEach((file, idx) => {
+    const url = URL.createObjectURL(file);
+    const thumb = document.createElement('div');
+    thumb.className = 'img-thumb';
+    thumb.innerHTML = `<img src="${url}" alt="Selected photo"><button type="button" class="remove-img" title="Remove">&times;</button>` +
+      (idx === 0 ? '<span class="new-tag">Main</span>' : '');
+    thumb.querySelector('.remove-img').addEventListener('click', () => {
+      URL.revokeObjectURL(url);
+      pendingFiles.splice(idx, 1);
+      renderPendingImages();
+    });
+    pManager.appendChild(thumb);
+  });
+}
+
+// 7b. AI buttons (Add form + Edit modal)
 const aiBtn = document.getElementById('p-ai-btn');
 const aiStatus = document.getElementById('p-ai-status');
 const pFileInput = document.getElementById('p-image-file');
 
 async function runAddFormAi(force) {
-  const file = pFileInput.files[0];
+  const file = pendingFiles[0];
   if (!file) { aiStatus.textContent = 'Choose a photo first.'; return; }
   aiBtn.disabled = true;
   aiStatus.textContent = '✨ AI is reading your photo...';
@@ -562,7 +587,13 @@ async function runAddFormAi(force) {
   }
 }
 aiBtn?.addEventListener('click', () => runAddFormAi(true));
-pFileInput?.addEventListener('change', () => { if (pFileInput.files.length) runAddFormAi(false); });
+pFileInput?.addEventListener('change', () => {
+  const hadNone = pendingFiles.length === 0;
+  pendingFiles.push(...Array.from(pFileInput.files));
+  pFileInput.value = '';
+  renderPendingImages();
+  if (hadNone && pendingFiles.length) runAddFormAi(false);
+});
 
 const eAiBtn = document.getElementById('e-ai-btn');
 const eAiStatus = document.getElementById('e-ai-status');

@@ -286,7 +286,9 @@
         </div>
         <div class="form-group">
           <label>Select Multiple Images</label>
-          <input type="file" id="p-image-file" accept="image/*" multiple required>
+          <div class="img-hint">Tap the red × on a photo to remove it. You can keep adding more photos. The first photo is the main one.</div>
+          <div class="img-manager" id="p-image-manager"></div>
+          <input type="file" id="p-image-file" accept="image/*" multiple>
           <div class="ai-row">
             <button type="button" class="btn-ai" id="p-ai-btn">✨ Fill name, category &amp; description with AI</button>
             <span class="ai-status" id="p-ai-status"></span>

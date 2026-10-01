@@ -8,6 +8,9 @@ let realtimeStarted = false;
 let activeCategory = 'all';
 let searchTerm = '';
 let wholesaleCart = [];
+let selectedSize = '';
+const SIZES = ['L', 'XL', 'XXL', 'XXXL'];
+const isValidPhone = (p) => /^\+?[\d\s-]{9,15}$/.test(p) && p.replace(/\D/g, '').length >= 9;
 
 const CATEGORIES = [
   { key: 'all', label: 'All' },
@@ -214,7 +217,7 @@ function renderProducts() {
           <div class="product-price">GHS ${Number(prod.price).toFixed(2)}</div>
         </div>
         <button class="btn btn-primary add-to-cart-quick" ${isOutOfStock ? 'disabled' : ''}>
-          ${isOutOfStock ? 'Sold Out' : 'Add To Cart'}
+          ${isOutOfStock ? 'Sold Out' : 'Choose Size'}
         </button>
       </div>
     `;
@@ -225,7 +228,7 @@ function renderProducts() {
     if (addBtn && !isOutOfStock) {
       addBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        addToCart(prod.id);
+        openModal(prod);
       });
     }
 
@@ -333,12 +336,17 @@ function updateWholesaleUI() {
 document.getElementById('ws-checkout-btn')?.addEventListener('click', () => {
   const name = document.getElementById('ws-name').value.trim();
   const address = document.getElementById('ws-address').value.trim();
+  const phone = document.getElementById('ws-phone').value.trim();
+  const sizes = document.getElementById('ws-sizes').value.trim();
 
   if (wholesaleCart.length === 0) return alert('Your bulk order is empty!');
   if (!name || !address) return alert('Please fill in your name and delivery location!');
+  if (!isValidPhone(phone)) return alert('Please enter a valid phone number.');
 
   let msg = `*New WHOLESALE Order - KD Wisdom Enterprise*\n\n`;
-  msg += `*Customer:* ${name}\n*Location:* ${address}\n\n*Items Ordered:*\n`;
+  msg += `*Customer:* ${name}\n*Phone:* ${phone}\n*Location:* ${address}\n`;
+  if (sizes) msg += `*Sizes needed:* ${sizes}\n`;
+  msg += `\n*Items Ordered:*\n`;
 
   let grand = 0;
   wholesaleCart.forEach((item, idx) => {
@@ -363,13 +371,14 @@ function openModal(prod) {
   modalAddCartBtn.disabled = prod.stock <= 0;
   modalAddCartBtn.textContent = prod.stock > 0 ? 'Add To Cart' : 'Sold Out';
 
+  selectedSize = '';
+  renderSizePicker();
   updateSlideshow();
 
   modalAddCartBtn.onclick = () => {
-    if (prod.stock > 0) {
-      addToCart(prod.id);
-      closeModal();
-    }
+    if (prod.stock <= 0) return;
+    if (!selectedSize) return alert('Please select a size (L, XL, XXL or XXXL).');
+    if (addToCart(prod.id, selectedSize)) closeModal();
   };
 
   productModal.classList.add('active');
@@ -395,22 +404,40 @@ function closeModal() {
 }
 document.getElementById('close-modal')?.addEventListener('click', closeModal);
 
-function addToCart(productId) {
+function renderSizePicker() {
+  const box = document.getElementById('size-picker');
+  if (!box) return;
+  box.innerHTML = '';
+  SIZES.forEach((size) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'size-btn' + (size === selectedSize ? ' active' : '');
+    btn.textContent = size;
+    btn.addEventListener('click', () => { selectedSize = size; renderSizePicker(); });
+    box.appendChild(btn);
+  });
+}
+
+// Same product in a different size becomes its own cart line
+function addToCart(productId, size) {
   const prod = products.find(p => p.id === productId);
-  if (!prod) return;
+  if (!prod) return false;
 
   const primaryImg = (prod.images && prod.images[0]) || prod.image_url || 'https://via.placeholder.com/100';
 
-  const existing = cart.find(item => item.id === productId);
-  if (existing) {
-    if (existing.qty < prod.stock) existing.qty++;
-    else alert('Maximum available stock reached.');
-  } else {
-    cart.push({ id: prod.id, name: prod.name, price: Number(prod.price), img: primaryImg, qty: 1 });
+  const inCart = cart.filter(i => i.id === productId).reduce((sum, i) => sum + i.qty, 0);
+  if (inCart >= Number(prod.stock)) {
+    alert('Maximum available stock reached.');
+    return false;
   }
+
+  const existing = cart.find(i => i.id === productId && i.size === size);
+  if (existing) existing.qty++;
+  else cart.push({ id: prod.id, size, name: prod.name, price: Number(prod.price), img: primaryImg, qty: 1 });
 
   updateCartUI();
   openCartDrawer();
+  return true;
 }
 
 function updateCartUI() {
@@ -425,16 +452,17 @@ function updateCartUI() {
     const row = document.createElement('div');
     row.className = 'cart-item-row';
     row.innerHTML = `
-      <img src="${item.img}" alt="${item.name}">
+      <img src="${escapeHtml(item.img)}" alt="${escapeHtml(item.name)}">
       <div class="cart-item-details">
-        <h4>${item.name}</h4>
+        <h4>${escapeHtml(item.name)}</h4>
+        <div class="cart-item-size">Size: ${item.size}</div>
         <div class="cart-item-price">GHS ${item.price.toFixed(2)} x ${item.qty}</div>
       </div>
       <button class="remove-cart-item">&times;</button>
     `;
 
     row.querySelector('.remove-cart-item').addEventListener('click', () => {
-      cart = cart.filter(c => c.id !== item.id);
+      cart = cart.filter(c => !(c.id === item.id && c.size === item.size));
       updateCartUI();
     });
 
@@ -459,13 +487,16 @@ cartDrawerOverlay?.addEventListener('click', closeCartDrawer);
 
 document.getElementById('whatsapp-checkout-btn')?.addEventListener('click', () => {
   const name = document.getElementById('cust-name').value.trim();
+  const phone = document.getElementById('cust-phone').value.trim();
   const address = document.getElementById('cust-address').value.trim();
 
   if (cart.length === 0) return alert('Your cart is empty!');
   if (!name || !address) return alert('Please fill in your name and address!');
+  if (!isValidPhone(phone)) return alert('Please enter a valid phone number.');
 
   let orderMessage = `*New Order - KD Wisdom Enterprise*\n\n`;
   orderMessage += `*Customer:* ${name}\n`;
+  orderMessage += `*Phone:* ${phone}\n`;
   orderMessage += `*Location:* ${address}\n\n`;
   orderMessage += `*Items Ordered:*\n`;
 
@@ -473,7 +504,7 @@ document.getElementById('whatsapp-checkout-btn')?.addEventListener('click', () =
   cart.forEach((item, index) => {
     const sum = item.price * item.qty;
     grandTotal += sum;
-    orderMessage += `${index + 1}. ${item.name} (${item.qty}x) - GHS ${sum.toFixed(2)}\n`;
+    orderMessage += `${index + 1}. ${item.name} - Size ${item.size} (${item.qty}x) - GHS ${sum.toFixed(2)}\n`;
   });
 
   orderMessage += `\n*Total Amount:* GHS ${grandTotal.toFixed(2)}`;
