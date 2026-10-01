@@ -337,7 +337,7 @@ document.getElementById('ws-checkout-btn')?.addEventListener('click', () => {
   if (wholesaleCart.length === 0) return alert('Your bulk order is empty!');
   if (!name || !address) return alert('Please fill in your name and delivery location!');
 
-  let msg = `*New WHOLESALE Order - KD Enterprise*\n\n`;
+  let msg = `*New WHOLESALE Order - KD Wisdom Enterprise*\n\n`;
   msg += `*Customer:* ${name}\n*Location:* ${address}\n\n*Items Ordered:*\n`;
 
   let grand = 0;
@@ -464,7 +464,7 @@ document.getElementById('whatsapp-checkout-btn')?.addEventListener('click', () =
   if (cart.length === 0) return alert('Your cart is empty!');
   if (!name || !address) return alert('Please fill in your name and address!');
 
-  let orderMessage = `*New Order - KD Enterprise*\n\n`;
+  let orderMessage = `*New Order - KD Wisdom Enterprise*\n\n`;
   orderMessage += `*Customer:* ${name}\n`;
   orderMessage += `*Location:* ${address}\n\n`;
   orderMessage += `*Items Ordered:*\n`;

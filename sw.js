@@ -1,4 +1,4 @@
-const CACHE = 'kd-v2';
+const CACHE = 'kd-v3';
 const SHELL = ['./', './index.html', './admin.html', './js/app.js', './js/admin.js', './js/supabase-config.js', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

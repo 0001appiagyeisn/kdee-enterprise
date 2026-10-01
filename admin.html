@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KD Enterprise — Admin Stock Dashboard</title>
+  <title>KD Wisdom Enterprise — Admin Stock Dashboard</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#121212">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -102,6 +102,11 @@
       width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit;
     }
     .form-group select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; background: #fff; }
+    .ai-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+    .btn-ai { background: #faf6e6; color: #8a6d00; border: 1px solid var(--accent); padding: 8px 14px; border-radius: 6px; font-weight: 600; font-family: inherit; font-size: 0.85rem; cursor: pointer; }
+    .btn-ai:hover { background: var(--accent); color: #fff; }
+    .btn-ai:disabled { opacity: 0.6; cursor: not-allowed; }
+    .ai-status { font-size: 0.82rem; color: var(--text-muted); }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
     .btn-submit {
@@ -200,7 +205,7 @@
   </div>
 
   <header class="admin-navbar">
-    <div class="logo">KD <span>Admin Dashboard</span></div>
+    <div class="logo">KD Wisdom <span>Admin Dashboard</span></div>
     <div class="nav-actions">
       <a href="index.html" class="view-shop-link"><i class="fa-solid fa-store"></i> View Storefront</a>
       <button id="logout-btn" class="btn-logout" style="display:none;"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
@@ -282,6 +287,10 @@
         <div class="form-group">
           <label>Select Multiple Images</label>
           <input type="file" id="p-image-file" accept="image/*" multiple required>
+          <div class="ai-row">
+            <button type="button" class="btn-ai" id="p-ai-btn">✨ Fill name, category &amp; description with AI</button>
+            <span class="ai-status" id="p-ai-status"></span>
+          </div>
         </div>
         <button type="submit" id="upload-btn" class="btn-submit">Upload To Store</button>
       </form>
@@ -350,6 +359,10 @@
           <div class="img-hint">Click the red × to remove an image. Newly added images are tagged "New".</div>
           <div class="img-manager" id="e-image-manager"></div>
           <input type="file" id="e-image-file" accept="image/*" multiple>
+          <div class="ai-row">
+            <button type="button" class="btn-ai" id="e-ai-btn">✨ Fill name, category &amp; description with AI</button>
+            <span class="ai-status" id="e-ai-status"></span>
+          </div>
         </div>
         <div class="edit-actions">
           <button type="button" class="btn-cancel" id="edit-cancel">Cancel</button>

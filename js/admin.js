@@ -72,8 +72,70 @@ function formatGHS(n) {
   return 'GHS ' + Number(n || 0).toLocaleString('en-GH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+// ---------- Image compression (keeps storage & bandwidth small) ----------
+async function compressImage(file, maxSize = 1280, quality = 0.82) {
+  try {
+    if (!file.type || !file.type.startsWith('image/')) return file;
+    const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+    const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+    const w = Math.round(bitmap.width * scale);
+    const h = Math.round(bitmap.height * scale);
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    if (bitmap.close) bitmap.close();
+    const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', quality));
+    if (!blob || (scale === 1 && blob.size >= file.size)) return file;
+    const base = (file.name || 'photo').replace(/\.[^.]+$/, '');
+    return new File([blob], `${base}.jpg`, { type: 'image/jpeg' });
+  } catch (e) {
+    console.warn('Compression skipped:', e);
+    return file;
+  }
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = () => reject(new Error('Could not read image'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+// ---------- AI product helper (calls the secure Supabase Edge Function) ----------
+async function aiSuggest(fileOrBlob) {
+  const small = await compressImage(fileOrBlob, 768, 0.7);
+  const image = await blobToBase64(small);
+  const { data, error } = await supabase.functions.invoke('analyze-product', {
+    body: { image, mimeType: small.type || 'image/jpeg' }
+  });
+  if (error) {
+    let msg = error.message;
+    try { msg = (await error.context.json()).error || msg; } catch (e) { /* keep default */ }
+    throw new Error(msg);
+  }
+  if (data && data.error) throw new Error(data.error);
+  return data;
+}
+
+function applyAiResult(prefix, result, force) {
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el && value && (force || !el.value.trim())) el.value = value;
+  };
+  set(`${prefix}-name`, result.name);
+  set(`${prefix}-category`, result.category);
+  set(prefix === 'p' ? 'p-desc' : 'e-desc', result.description);
+}
+
 // Uploads a single file to Supabase storage, returns public URL (or throws)
 async function uploadImage(file) {
+  file = await compressImage(file);
   const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}_${file.name.replace(/\s+/g, '_')}`;
   const { error } = await supabase.storage.from(BUCKET).upload(fileName, file);
   if (error) throw new Error(error.message);
@@ -433,7 +495,7 @@ if (productForm) {
     const imageUrls = [];
 
     for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+      const file = await compressImage(files[i]);
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}_${file.name.replace(/\s+/g, '_')}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -479,5 +541,45 @@ if (productForm) {
     }
   });
 }
+
+// 7. AI buttons (Add form + Edit modal)
+const aiBtn = document.getElementById('p-ai-btn');
+const aiStatus = document.getElementById('p-ai-status');
+const pFileInput = document.getElementById('p-image-file');
+
+async function runAddFormAi(force) {
+  const file = pFileInput.files[0];
+  if (!file) { aiStatus.textContent = 'Choose a photo first.'; return; }
+  aiBtn.disabled = true;
+  aiStatus.textContent = '✨ AI is reading your photo...';
+  try {
+    applyAiResult('p', await aiSuggest(file), force);
+    aiStatus.textContent = '✅ Filled. Please check and edit before uploading.';
+  } catch (err) {
+    aiStatus.textContent = '⚠️ AI could not fill this (' + err.message + '). You can type it yourself.';
+  } finally {
+    aiBtn.disabled = false;
+  }
+}
+aiBtn?.addEventListener('click', () => runAddFormAi(true));
+pFileInput?.addEventListener('change', () => { if (pFileInput.files.length) runAddFormAi(false); });
+
+const eAiBtn = document.getElementById('e-ai-btn');
+const eAiStatus = document.getElementById('e-ai-status');
+eAiBtn?.addEventListener('click', async () => {
+  eAiBtn.disabled = true;
+  eAiStatus.textContent = '✨ AI is reading the photo...';
+  try {
+    let source = newFiles[0];
+    if (!source && keptImages[0]) source = await (await fetch(keptImages[0])).blob();
+    if (!source) throw new Error('no image available');
+    applyAiResult('e', await aiSuggest(source), true);
+    eAiStatus.textContent = '✅ Filled. Please check before saving.';
+  } catch (err) {
+    eAiStatus.textContent = '⚠️ AI could not fill this (' + err.message + ').';
+  } finally {
+    eAiBtn.disabled = false;
+  }
+});
 
 checkAuth();
