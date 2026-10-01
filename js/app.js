@@ -174,7 +174,8 @@ function bindSearch() {
     productGrid?.scrollIntoView({ behavior: 'smooth' });
   });
   document.getElementById('search-nav-btn')?.addEventListener('click', () => {
-    document.getElementById('new-arrivals')?.scrollIntoView({ behavior: 'smooth' });
+    if (location.hash === '#wholesale') location.hash = '#new-arrivals';
+    else document.getElementById('new-arrivals')?.scrollIntoView({ behavior: 'smooth' });
     setTimeout(() => input?.focus(), 400);
   });
 }
@@ -195,7 +196,22 @@ function renderProducts() {
 
   const list = getFilteredProducts();
   if (list.length === 0) {
-    productGrid.innerHTML = '<p class="no-results">No products found. Try another category or search.</p>';
+    const filtered = searchTerm || activeCategory !== 'all';
+    const catName = (CATEGORIES.find((c) => c.key === activeCategory) || {}).label || '';
+    const msg = searchTerm
+      ? `No products match "${escapeHtml(searchTerm)}".`
+      : (activeCategory !== 'all' ? `No ${escapeHtml(catName)} products yet.` : 'No products available yet.');
+    productGrid.innerHTML = `<div class="no-results"><p>${msg}</p>` +
+      (filtered ? '<button type="button" class="btn btn-primary" id="reset-filters"><i class="fa-solid fa-arrow-left"></i> Show All Products</button>' : '') +
+      '</div>';
+    document.getElementById('reset-filters')?.addEventListener('click', () => {
+      activeCategory = 'all';
+      searchTerm = '';
+      const input = document.getElementById('search-input');
+      if (input) input.value = '';
+      renderChips();
+      renderProducts();
+    });
     return;
   }
 
@@ -537,8 +553,33 @@ document.getElementById('whatsapp-checkout-btn')?.addEventListener('click', () =
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMsg}`, '_blank');
 });
 
+// ---------- Page switching: Home (shop) vs Wholesale ----------
+function route() {
+  const isWholesale = location.hash === '#wholesale';
+  const home = document.getElementById('home-view');
+  const wholesale = document.getElementById('wholesale');
+  if (!home || !wholesale) return;
+
+  home.style.display = isWholesale ? 'none' : '';
+  wholesale.style.display = isWholesale ? '' : 'none';
+  document.querySelectorAll('.nav-links a').forEach((link) => {
+    link.classList.toggle('active', isWholesale && link.getAttribute('href') === '#wholesale');
+  });
+
+  if (isWholesale) {
+    window.scrollTo(0, 0);
+  } else {
+    window.dispatchEvent(new Event('resize')); // fixes the 3D hero size after being hidden
+    const target = document.getElementById(location.hash.slice(1));
+    if (target) target.scrollIntoView();
+    else window.scrollTo(0, 0);
+  }
+}
+window.addEventListener('hashchange', route);
+
 document.addEventListener('DOMContentLoaded', () => {
   init3DHero();
+  route();
   renderChips();
   bindSearch();
   updateWholesaleUI();

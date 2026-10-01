@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KD Wisdom Enterprise — Luxury & Timeless Fashion</title>
   <link rel="manifest" href="manifest.json">
   <!-- This shows in Google search results -->
 <title>KD Wisdom Enterprise - Luxury Clothing & Fashion in Ghana</title>
@@ -281,6 +280,10 @@ boys occasion wear
     .size-prod img { width: 72px; height: 72px; object-fit: cover; border-radius: 4px; background: #f0f0f0; }
     .size-prod h3 { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
     .size-prod .modal-price { margin-bottom: 0; font-size: 1.1rem; }
+    .back-link { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 25px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); transition: var(--transition); }
+    .back-link:hover { color: var(--accent); }
+    .nav-links a.active { color: var(--accent); }
+    .no-results .btn { margin-top: 18px; }
     .cart-item-size { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 3px; }
 
     .footer { background: var(--primary); color: #888888; text-align: center; padding: 40px 5%; font-size: 0.85rem; }
@@ -306,6 +309,7 @@ boys occasion wear
     </div>
   </header>
 
+  <div id="home-view">
   <section class="hero-section" id="hero">
     <canvas id="hero-3d-canvas"></canvas>
     <div class="hero-content">
@@ -331,8 +335,11 @@ boys occasion wear
     <div id="product-grid" class="product-grid"></div>
   </section>
 
-  <!-- Wholesale / Bulk Orders -->
-  <section class="section-container wholesale-section" id="wholesale">
+  </div><!-- /home-view -->
+
+  <!-- Wholesale / Bulk Orders (separate page, opens from the Wholesale menu) -->
+  <section class="section-container wholesale-section" id="wholesale" style="display:none;">
+    <a href="#new-arrivals" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Shop</a>
     <div class="section-header">
       <h2>Wholesale</h2>
       <p>Buying in bulk? Enjoy special per-piece prices when you order the minimum quantity.</p>
