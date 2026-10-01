@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://kdwisdomenterprise.netlify.app/sitemap.xml
