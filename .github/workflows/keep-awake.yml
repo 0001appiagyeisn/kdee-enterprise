@@ -1,0 +1,19 @@
+# Pings Supabase every 3 days so the free project does not pause from inactivity.
+# (Both values below are the same public values already used by your website.)
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: "0 6 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        run: |
+          curl -fsS "https://bklonxflimbhmhtbtzqb.supabase.co/rest/v1/products?select=id&limit=1" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrbG9ueGZsaW1iaG1odGJ0enFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NTgzMDMsImV4cCI6MjEwNjMzNDMwM30.8DTI8QU7SKPMtoGikM4YSz5ZQ4uzGdwy8Bgje1DaOs8" \
+            -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrbG9ueGZsaW1iaG1odGJ0enFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NTgzMDMsImV4cCI6MjEwNjMzNDMwM30.8DTI8QU7SKPMtoGikM4YSz5ZQ4uzGdwy8Bgje1DaOs8"
+          echo "Supabase responded OK"
