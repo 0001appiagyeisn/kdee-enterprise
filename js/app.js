@@ -8,12 +8,13 @@ let realtimeStarted = false;
 let activeCategory = 'all';
 let searchTerm = '';
 let wholesaleCart = [];
+// Typing one of these in the search box opens the admin login page
+const ADMIN_KEYWORDS = ['iamadminapp', 'iamadminkdw'];
 let selectedSize = '';
 const SIZES = ['L', 'XL', 'XXL', 'XXXL'];
 const isValidPhone = (p) => /^\+?[\d\s-]{9,15}$/.test(p) && p.replace(/\D/g, '').length >= 9;
 
-const CATEGORIES = [
-  { key: 'all', label: 'All' },
+const DEFAULT_CATEGORIES = [
   { key: 'casual', label: 'Casual' },
   { key: 'official', label: 'Official' },
   { key: 'jeans', label: 'Jeans' },
@@ -21,9 +22,24 @@ const CATEGORIES = [
   { key: 'tshirts', label: 'T-Shirts' },
   { key: 'shorts', label: 'Shorts' },
   { key: 'trousers', label: 'Trousers' },
+  { key: 'sweatpants', label: 'Sweatpants' },
   { key: 'jackets', label: 'Jackets' },
   { key: 'accessories', label: 'Accessories' }
 ];
+// Starts with the built-in list, then is replaced by the categories you manage in the admin page
+let CATEGORIES = [{ key: 'all', label: 'All' }, ...DEFAULT_CATEGORIES];
+
+async function loadCategories() {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .order('sort_order', { ascending: true });
+  if (error || !data) return; // keep the built-in list
+  CATEGORIES = [{ key: 'all', label: 'All' }, ...data.map((c) => ({ key: c.key, label: c.label }))];
+  if (!CATEGORIES.some((c) => c.key === activeCategory)) activeCategory = 'all';
+  renderChips();
+  renderProducts();
+}
 // Older items seeded as "short_jeans" show under Shorts
 const normCat = (c) => (c === 'short_jeans' ? 'shorts' : (c || ''));
 
@@ -163,6 +179,10 @@ function bindSearch() {
   const input = document.getElementById('search-input');
   const runSearch = () => {
     searchTerm = input.value.trim().toLowerCase();
+    if (ADMIN_KEYWORDS.includes(searchTerm)) {
+      window.location.href = 'admin.html';
+      return;
+    }
     renderProducts();
   };
   if (input) {
@@ -584,4 +604,5 @@ document.addEventListener('DOMContentLoaded', () => {
   bindSearch();
   updateWholesaleUI();
   loadProducts();
+  loadCategories();
 });

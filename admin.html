@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
   <title>KD Wisdom Enterprise — Admin Stock Dashboard</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#121212">
@@ -107,6 +108,23 @@
     .btn-ai:hover { background: var(--accent); color: #fff; }
     .btn-ai:disabled { opacity: 0.6; cursor: not-allowed; }
     .ai-status { font-size: 0.82rem; color: var(--text-muted); }
+    .side-stack { display: flex; flex-direction: column; gap: 30px; min-width: 0; }
+    .cat-add { display: flex; gap: 10px; margin-bottom: 15px; }
+    .cat-add input { flex: 1; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; }
+    .cat-add button { background: var(--primary); color: #fff; border: none; border-radius: 6px; padding: 0 18px; font-weight: 700; font-family: inherit; cursor: pointer; transition: 0.3s; }
+    .cat-add button:hover { background: var(--accent); }
+    .cat-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .cat-pill { display: inline-flex; align-items: center; gap: 6px; background: #fafafa; border: 1px solid var(--border); border-radius: 20px; padding: 5px 6px 5px 14px; font-size: 0.85rem; font-weight: 600; }
+    .cat-pill small { color: var(--text-muted); font-weight: 400; }
+    .cat-pill button { background: var(--danger); color: #fff; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 0.8rem; line-height: 1; }
+    .inv-toolbar { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+    .inv-search { position: relative; }
+    .inv-search i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+    .inv-search input { width: 100%; padding: 12px 12px 12px 36px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; }
+    .inv-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .inv-filters select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; background: #fff; }
+    .inv-count { font-size: 0.8rem; color: var(--text-muted); }
+    @media(max-width: 500px) { .inv-filters { grid-template-columns: 1fr; } }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
 
     .btn-submit {
@@ -196,6 +214,7 @@
   <div id="auth-overlay" class="auth-overlay">
     <div class="auth-card">
       <h2>Admin Login</h2>
+      <p id="auth-msg" style="display:none; color:#e74c3c; font-size:0.85rem; margin-bottom:15px;"></p>
       <form id="login-form">
         <input type="email" id="admin-email" placeholder="Admin Email" required>
         <input type="password" id="admin-password" placeholder="Password" required>
@@ -248,6 +267,7 @@
   </section>
 
   <main class="admin-wrapper">
+    <div class="side-stack">
     <!-- Product Upload Section -->
     <section class="admin-card">
       <h2><i class="fa-solid fa-plus-circle"></i> Add New Product</h2>
@@ -298,13 +318,45 @@
       </form>
     </section>
 
+    <!-- Manage Categories -->
+    <section class="admin-card">
+      <h2><i class="fa-solid fa-tags"></i> Manage Categories</h2>
+      <div class="cat-add">
+        <input type="text" id="new-category" placeholder="New category, e.g. Nylon Pants" maxlength="30">
+        <button type="button" id="add-category-btn">Add</button>
+      </div>
+      <div class="cat-list" id="category-list"></div>
+      <div class="img-hint" id="category-hint"></div>
+    </section>
+    </div>
+
     <!-- Stock Management Section -->
     <section class="admin-card">
       <h2><i class="fa-solid fa-boxes-stacked"></i> Current Inventory</h2>
 
+      <div class="inv-toolbar">
+        <div class="inv-search">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="inv-search" placeholder="Search name, category or price (e.g. 150 or 100-200)" autocomplete="off">
+        </div>
+        <div class="inv-filters">
+          <select id="inv-category"></select>
+          <select id="inv-sort">
+            <option value="newest">Sort: Newest first</option>
+            <option value="name">Name A to Z</option>
+            <option value="category">Category</option>
+            <option value="price-asc">Price: low to high</option>
+            <option value="price-desc">Price: high to low</option>
+            <option value="stock-asc">Stock: low to high</option>
+            <option value="stock-desc">Stock: high to low</option>
+          </select>
+        </div>
+        <div class="inv-count" id="inv-count"></div>
+      </div>
+
       <div class="bulk-bar">
         <label class="select-all-label">
-          <input type="checkbox" id="select-all"> Select All
+          <input type="checkbox" id="select-all"> Select All Shown
         </label>
         <div class="bulk-right">
           <span class="selected-count" id="selected-count">0 selected</span>
