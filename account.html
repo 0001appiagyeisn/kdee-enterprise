@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>My Account — KD Wisdom Enterprise</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#121212">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/kd-pages.css">
+</head>
+<body>
+  <header class="kd-header">
+    <a href="index.html" class="brand-logo">KD Wisdom <span>Enterprise</span></a>
+    <nav class="kd-nav">
+      <a href="index.html">Shop</a>
+      <a href="index.html#wholesale">Wholesale</a>
+      <a href="about.html">About</a>
+      <a href="faq.html">FAQs</a>
+      <a href="contact.html">Contact</a>
+      <a href="messages.html"><i class="fa-regular fa-comments"></i> Chat</a>
+      <a href="account.html" class="active"><i class="fa-regular fa-user"></i> Account</a>
+    </nav>
+  </header>
+
+  <!-- Logged out: login / sign up / forgot password -->
+  <main class="page page-narrow" id="auth-view" hidden>
+    <h1>Welcome</h1>
+    <p class="lead">Log in or create an account to order and track your purchases.</p>
+    <div class="card">
+      <div class="tabs">
+        <button type="button" data-tab="login" class="active">Log In</button>
+        <button type="button" data-tab="signup">Sign Up</button>
+      </div>
+      <div class="alert" id="auth-alert"></div>
+
+      <form id="login-form" data-panel="login">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="login-email" required autocomplete="email">
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <div class="input-password-wrap">
+            <input type="password" id="login-password" required autocomplete="current-password">
+            <button type="button" class="btn-pw-toggle" aria-label="Toggle password visibility"><i class="fa-regular fa-eye"></i></button>
+          </div>
+        </div>
+        <button class="btn btn-dark btn-block" type="submit">Log In</button>
+        <p style="text-align:center;margin-top:14px;"><button type="button" class="link-btn" id="show-forgot">Forgot password?</button></p>
+      </form>
+
+      <form id="signup-form" data-panel="signup" hidden>
+        <div class="field"><label>Full Name</label><input type="text" id="su-name" required maxlength="80" autocomplete="name"></div>
+        <div class="field"><label>Email</label><input type="email" id="su-email" required autocomplete="email"></div>
+        <div class="field"><label>Phone Number</label><input type="tel" id="su-phone" required placeholder="e.g. 0244123456" autocomplete="tel"></div>
+        <div class="row-2">
+          <div class="field">
+            <label>Password</label>
+            <div class="input-password-wrap">
+              <input type="password" id="su-password" required minlength="8" autocomplete="new-password">
+              <button type="button" class="btn-pw-toggle" aria-label="Toggle password visibility"><i class="fa-regular fa-eye"></i></button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Confirm</label>
+            <div class="input-password-wrap">
+              <input type="password" id="su-password2" required minlength="8" autocomplete="new-password">
+              <button type="button" class="btn-pw-toggle" aria-label="Toggle password visibility"><i class="fa-regular fa-eye"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Real-time Password Strength Checklist -->
+        <div class="pw-checklist" id="su-pw-checklist">
+          <div class="pw-item" id="su-rule-len"><i class="fa-regular fa-circle"></i> At least 8 characters</div>
+          <div class="pw-item" id="su-rule-case"><i class="fa-regular fa-circle"></i> Uppercase and lowercase letters</div>
+          <div class="pw-item" id="su-rule-num"><i class="fa-regular fa-circle"></i> At least one number (0-9)</div>
+          <div class="pw-item" id="su-rule-sym"><i class="fa-regular fa-circle"></i> At least one special symbol (!@#$%...)</div>
+          <div class="pw-item" id="su-rule-match"><i class="fa-regular fa-circle"></i> Passwords match</div>
+        </div>
+
+        <button class="btn btn-dark btn-block" type="submit">Create Account</button>
+      </form>
+
+      <form id="forgot-form" data-panel="forgot" hidden>
+        <p class="muted" style="margin-bottom:14px;">Enter your email and we'll send you a link to set a new password.</p>
+        <div class="field"><label>Email</label><input type="email" id="fp-email" required></div>
+        <button class="btn btn-dark btn-block" type="submit">Send Reset Link</button>
+        <p style="text-align:center;margin-top:14px;"><button type="button" class="link-btn" id="back-login">Back to log in</button></p>
+      </form>
+    </div>
+  </main>
+
+  <!-- After clicking the email reset link -->
+  <main class="page page-narrow" id="reset-view" hidden>
+    <h1>New Password</h1>
+    <div class="card">
+      <div class="alert" id="reset-alert"></div>
+      <form id="reset-form">
+        <div class="field">
+          <label>New Password</label>
+          <div class="input-password-wrap">
+            <input type="password" id="rp-password" required minlength="8" autocomplete="new-password">
+            <button type="button" class="btn-pw-toggle" aria-label="Toggle password visibility"><i class="fa-regular fa-eye"></i></button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Confirm</label>
+          <div class="input-password-wrap">
+            <input type="password" id="rp-password2" required minlength="8" autocomplete="new-password">
+            <button type="button" class="btn-pw-toggle" aria-label="Toggle password visibility"><i class="fa-regular fa-eye"></i></button>
+          </div>
+        </div>
+
+        <!-- Reset Password Checklist -->
+        <div class="pw-checklist" id="rp-pw-checklist">
+          <div class="pw-item" id="rp-rule-len"><i class="fa-regular fa-circle"></i> At least 8 characters</div>
+          <div class="pw-item" id="rp-rule-case"><i class="fa-regular fa-circle"></i> Uppercase and lowercase letters</div>
+          <div class="pw-item" id="rp-rule-num"><i class="fa-regular fa-circle"></i> At least one number (0-9)</div>
+          <div class="pw-item" id="rp-rule-sym"><i class="fa-regular fa-circle"></i> At least one special symbol (!@#$%...)</div>
+          <div class="pw-item" id="rp-rule-match"><i class="fa-regular fa-circle"></i> Passwords match</div>
+        </div>
+
+        <button class="btn btn-dark btn-block" type="submit">Save New Password</button>
+      </form>
+    </div>
+  </main>
+
+  <!-- Logged in -->
+  <main class="page" id="profile-view" hidden>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+      <div>
+        <h1 id="hello">My Account</h1>
+        <p class="muted" id="account-email"></p>
+      </div>
+      <button class="btn btn-outline btn-sm" id="logout-btn"><i class="fa-solid fa-right-from-bracket"></i> Log Out</button>
+    </div>
+
+    <div class="grid-2">
+      <div class="stack">
+        <section class="card">
+          <h2><i class="fa-solid fa-bag-shopping"></i> My Orders</h2>
+          <div id="orders-list"><p class="muted">Loading...</p></div>
+        </section>
+
+        <section class="card">
+          <h2><i class="fa-solid fa-mobile-screen"></i> Payment Methods</h2>
+          <p class="muted" style="margin-bottom:14px;">Save your Mobile Money numbers. At checkout we send the payment prompt straight to the number you choose. Card details are never stored on our site; card payments are handled securely by Paystack.</p>
+          <div class="alert" id="momo-alert"></div>
+          <div id="momo-list"></div>
+          <div class="row-2" style="margin-top:14px;">
+            <div class="field">
+              <label>Network</label>
+              <select id="momo-network">
+                <option value="mtn">MTN MoMo</option>
+                <option value="vod">Telecel Cash</option>
+                <option value="atl">AirtelTigo Money</option>
+              </select>
+            </div>
+            <div class="field"><label>MoMo Number</label><input type="tel" id="momo-number" placeholder="e.g. 0244123456"></div>
+          </div>
+          <button class="btn btn-dark btn-sm" id="momo-add" type="button"><i class="fa-solid fa-plus"></i> Add Number</button>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="card">
+          <h2><i class="fa-regular fa-user"></i> Profile</h2>
+          <div class="alert" id="profile-alert"></div>
+          <form id="profile-form">
+            <div class="field"><label>Full Name</label><input type="text" id="pf-name" required maxlength="80"></div>
+            <div class="field"><label>Phone Number</label><input type="tel" id="pf-phone" required></div>
+            <div class="field"><label>Default Delivery Location</label><input type="text" id="pf-address" maxlength="200" placeholder="Area, street or landmark"></div>
+            <button class="btn btn-dark btn-block" type="submit">Save Profile</button>
+          </form>
+        </section>
+
+        <section class="card">
+          <h2><i class="fa-solid fa-lock"></i> Change Password</h2>
+          <div class="alert" id="pw-alert"></div>
+          <form id="pw-form">
+            <div class="field">
+              <label>Current Password</label>
+              <div class="input-password-wrap">
+                <input type="password" id="pw-current" required autocomplete="current-password">
+                <button type="button" class="btn-pw-toggle" aria-label="Toggle password visibility"><i class="fa-regular fa-eye"></i></button>
+              </div>
+            </div>
+            <div class="field">
+              <label>New Password</label>
+              <div class="input-password-wrap">
+                <input type="password" id="pw-new" required minlength="8" autocomplete="new-password">
+                <button type="button" class="btn-pw-toggle" aria-label="Toggle password visibility"><i class="fa-regular fa-eye"></i></button>
+              </div>
+            </div>
+            <div class="field">
+              <label>Confirm New Password</label>
+              <div class="input-password-wrap">
+                <input type="password" id="pw-new2" required minlength="8" autocomplete="new-password">
+                <button type="button" class="btn-pw-toggle" aria-label="Toggle password visibility"><i class="fa-regular fa-eye"></i></button>
+              </div>
+            </div>
+
+            <!-- Password Checklist -->
+            <div class="pw-checklist" id="pw-checklist">
+              <div class="pw-item" id="pw-rule-len"><i class="fa-regular fa-circle"></i> At least 8 characters</div>
+              <div class="pw-item" id="pw-rule-case"><i class="fa-regular fa-circle"></i> Uppercase and lowercase letters</div>
+              <div class="pw-item" id="pw-rule-num"><i class="fa-regular fa-circle"></i> At least one number (0-9)</div>
+              <div class="pw-item" id="pw-rule-sym"><i class="fa-regular fa-circle"></i> At least one special symbol (!@#$%...)</div>
+              <div class="pw-item" id="pw-rule-match"><i class="fa-regular fa-circle"></i> Passwords match</div>
+            </div>
+
+            <button class="btn btn-dark btn-block" type="submit">Update Password</button>
+          </form>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="kd-footer">
+    <p>KD Wisdom Enterprise · Kejetia Market, Kumasi, Ghana · <a href="tel:+233500111114">050 011 1114</a></p>
+    <p style="margin-top:8px;">
+      <a href="index.html">Shop</a> ·
+      <a href="about.html">About Us</a> ·
+      <a href="faq.html">FAQs</a> ·
+      <a href="contact.html">Contact Us</a> ·
+      <a href="terms.html">Terms of Service</a> ·
+      <a href="refund-policy.html">Refund &amp; Delivery Policy</a> ·
+      <a href="account.html">My Account</a>
+    </p>
+    <p style="margin-top:8px;">&copy; 2026 KD Wisdom Enterprise. All Rights Reserved.</p>
+  </footer>
+
+  <script type="module" src="js/account.js"></script>
+</body>
+</html>

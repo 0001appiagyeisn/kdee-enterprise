@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Checkout — KD Wisdom Enterprise</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#121212">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <link rel="stylesheet" href="css/kd-pages.css">
+</head>
+<body>
+  <header class="kd-header">
+    <a href="index.html" class="brand-logo">KD Wisdom <span>Enterprise</span></a>
+    <nav class="kd-nav">
+      <a href="index.html">Shop</a>
+      <a href="index.html#wholesale">Wholesale</a>
+      <a href="about.html">About</a>
+      <a href="faq.html">FAQs</a>
+      <a href="contact.html">Contact</a>
+      <a href="account.html"><i class="fa-regular fa-user"></i> Account</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <h1 id="page-title">Checkout</h1>
+    <p class="lead" id="lead-text">Secure payment with Mobile Money or card.</p>
+    <div class="alert" id="mode-banner"></div>
+
+    <div class="card" id="empty-box" hidden>
+      <p>Your cart is empty.</p>
+      <a href="index.html" class="btn btn-primary" style="margin-top:14px;">Continue Shopping</a>
+    </div>
+
+    <div class="grid-2" id="checkout-box" hidden>
+      <!-- Left: details -->
+      <div class="stack">
+        <section class="card">
+          <h2><i class="fa-regular fa-user"></i> Your Details</h2>
+          <div class="row-2">
+            <div class="field"><label>Full Name</label><input type="text" id="c-name" maxlength="80" required></div>
+            <div class="field"><label>Phone Number</label><input type="tel" id="c-phone" placeholder="e.g. 0244123456" required></div>
+          </div>
+          <p class="muted" id="receipt-note">Receipt goes to <b id="c-email"></b> and by SMS to your phone.</p>
+        </section>
+
+        <section class="card">
+          <h2><i class="fa-solid fa-truck-fast"></i> Pickup or Delivery</h2>
+          <div class="options">
+            <label class="option" id="opt-pickup">
+              <input type="radio" name="method" value="pickup">
+              <div><b>Pick up at our shop — Free</b><span id="shop-address">Kejetia Market, Kumasi</span></div>
+            </label>
+            <label class="option" id="opt-delivery">
+              <input type="radio" name="method" value="delivery">
+              <div><b>Deliver to me</b><span>Choose your location on the map. The fee depends on travel time from our shop.</span></div>
+            </label>
+          </div>
+
+          <div id="delivery-box" hidden>
+            <div class="search-row">
+              <input type="text" id="place-search" placeholder="Search an area or landmark, e.g. Adum Kumasi">
+              <button class="btn btn-dark btn-sm" type="button" id="place-search-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+            </div>
+            <ul class="search-results" id="search-results"></ul>
+            <div class="map-tools">
+              <button class="btn btn-outline btn-sm" type="button" id="locate-btn"><i class="fa-solid fa-location-crosshairs"></i> Use my current location</button>
+            </div>
+            <div class="search-row">
+              <input type="text" id="link-input" placeholder="Or paste a Google Maps link or coordinates">
+              <button class="btn btn-outline btn-sm" type="button" id="link-btn"><i class="fa-solid fa-link"></i> Use</button>
+            </div>
+            <p class="muted" id="link-msg" style="margin-bottom:12px;">Can't find your place? Open Google Maps, tap the spot, then <b>Share → Copy link</b> and paste it here.</p>
+            <div id="map"></div>
+            <p class="muted" style="margin-bottom:12px;">Tap the map to move your pin to the exact spot.</p>
+            <div class="quote-box" id="quote-box"></div>
+            <div class="field">
+              <label>Delivery Address / Landmark</label>
+              <input type="text" id="c-address" maxlength="200" placeholder="e.g. Asokwa, near the Total filling station, blue gate">
+            </div>
+          </div>
+          <div class="field">
+            <label>Notes for the shop (optional)</label>
+            <textarea id="c-notes" rows="2" maxlength="500" placeholder="Anything we should know"></textarea>
+          </div>
+        </section>
+
+        <section class="card" id="payment-card">
+          <h2><i class="fa-solid fa-wallet"></i> Payment</h2>
+          <div class="options">
+            <label class="option" id="opt-momo">
+              <input type="radio" name="pay" value="momo" checked>
+              <div><b>Mobile Money</b><span>A payment prompt is sent to your phone. Enter your MoMo PIN to approve.</span></div>
+            </label>
+            <label class="option" id="opt-card">
+              <input type="radio" name="pay" value="paystack">
+              <div><b>Card, bank or other</b><span>You'll go to Paystack's secure payment page.</span></div>
+            </label>
+          </div>
+          <div id="momo-box">
+            <div class="field" id="saved-momo-field" hidden>
+              <label>Saved numbers</label>
+              <select id="saved-momo"></select>
+            </div>
+            <div class="row-2">
+              <div class="field">
+                <label>Network</label>
+                <select id="momo-network">
+                  <option value="mtn">MTN MoMo</option>
+                  <option value="vod">Telecel Cash</option>
+                  <option value="atl">AirtelTigo Money</option>
+                </select>
+              </div>
+              <div class="field"><label>MoMo Number</label><input type="tel" id="momo-number" placeholder="e.g. 0244123456"></div>
+            </div>
+            <label class="check"><input type="checkbox" id="momo-save"> Save this number to my account</label>
+          </div>
+        </section>
+      </div>
+
+      <!-- Right: summary -->
+      <aside class="stack">
+        <section class="card">
+          <h2><i class="fa-solid fa-receipt"></i> <span id="summary-title">Order Summary</span></h2>
+          <div id="summary-items"></div>
+          <div class="totals">
+            <div><span>Subtotal</span><span id="t-subtotal">GHS 0.00</span></div>
+            <div><span>Delivery</span><span id="t-delivery">—</span></div>
+            <div class="grand"><span>Total</span><span id="t-total">GHS 0.00</span></div>
+          </div>
+          <label class="check" style="margin-top:18px;">
+            <input type="checkbox" id="agree">
+            <span>I agree to the <a href="refund-policy.html" target="_blank">Refund &amp; Delivery Policy</a>.</span>
+          </label>
+          <div class="alert" id="pay-alert"></div>
+          <button class="btn btn-primary btn-block" id="pay-btn"><i class="fa-solid fa-credit-card"></i> <span id="pay-label">Pay</span></button>
+          <p class="muted" id="pay-note" style="text-align:center;margin-top:10px;"><i class="fa-solid fa-shield-halved"></i> Secure payments by Paystack. Mobile Money and cards accepted.</p>
+        </section>
+      </aside>
+    </div>
+
+    <!-- Waiting for mobile money approval -->
+    <div class="card pay-panel" id="wait-box" hidden>
+      <div class="spinner"></div>
+      <h2 style="justify-content:center;">Check your phone</h2>
+      <p id="wait-text" class="muted">Approve the payment prompt on your phone by entering your MoMo PIN.</p>
+      <p class="muted" style="margin-top:10px;">No prompt? MTN users can dial <b>*170#</b> and check <b>My Approvals</b>.</p>
+      <div id="otp-box" hidden style="max-width:300px;margin:18px auto 0;">
+        <div class="field"><label>Code sent to your phone</label><input type="text" id="otp" inputmode="numeric" maxlength="12"></div>
+        <button class="btn btn-dark btn-block" id="otp-btn">Submit Code</button>
+      </div>
+      <div class="alert" id="wait-alert" style="margin-top:16px;text-align:left;"></div>
+      <button class="btn btn-outline btn-sm" id="wait-back" hidden style="margin-top:10px;">Back to checkout</button>
+    </div>
+  </main>
+
+  <footer class="kd-footer">
+    <p>KD Wisdom Enterprise · Kejetia Market, Kumasi, Ghana · <a href="tel:+233500111114">050 011 1114</a></p>
+    <p style="margin-top:8px;">
+      <a href="index.html">Shop</a> ·
+      <a href="about.html">About Us</a> ·
+      <a href="faq.html">FAQs</a> ·
+      <a href="contact.html">Contact Us</a> ·
+      <a href="terms.html">Terms of Service</a> ·
+      <a href="refund-policy.html">Refund &amp; Delivery Policy</a> ·
+      <a href="account.html">My Account</a>
+    </p>
+    <p style="margin-top:8px;">&copy; 2026 KD Wisdom Enterprise. All Rights Reserved.</p>
+  </footer>
+
+  <script type="module" src="js/checkout.js"></script>
+</body>
+</html>

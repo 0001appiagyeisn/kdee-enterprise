@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Chat with us — KD Wisdom Enterprise</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#121212">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/kd-pages.css">
+</head>
+<body>
+  <header class="kd-header">
+    <a href="index.html" class="brand-logo">KD Wisdom <span>Enterprise</span></a>
+    <nav class="kd-nav">
+      <a href="index.html">Shop</a>
+      <a href="index.html#wholesale">Wholesale</a>
+      <a href="about.html">About</a>
+      <a href="faq.html">FAQs</a>
+      <a href="contact.html">Contact</a>
+      <a href="messages.html" class="active"><i class="fa-regular fa-comments"></i> Chat</a>
+      <a href="account.html"><i class="fa-regular fa-user"></i> Account</a>
+    </nav>
+  </header>
+
+  <main class="page page-narrow" style="max-width:720px;">
+    <h1>Chat with us</h1>
+    <p class="lead">Ask about an item, size, color, delivery or your order. We reply as soon as we can.</p>
+
+    <div class="card chat-card">
+      <div class="chat-head">
+        <b>KD Wisdom Enterprise</b>
+        <span class="muted"><i class="fa-solid fa-location-dot" style="color:var(--accent);"></i> Kejetia Market, Kumasi · Mon–Sat 7:00 AM – 5:00 PM (Google Verified)</span>
+      </div>
+      <div class="chat-thread" id="thread"><div class="chat-empty">Loading...</div></div>
+      <div class="alert" id="chat-alert" style="margin:0;border-radius:0;"></div>
+      <div class="chat-count" id="chat-count">0/1000</div>
+      <form class="chat-form" id="chat-form">
+        <textarea id="chat-input" rows="1" maxlength="1000" placeholder="Type your message..."></textarea>
+        <button class="btn btn-primary" id="chat-send" type="submit" aria-label="Send message"><i class="fa-solid fa-paper-plane"></i></button>
+      </form>
+    </div>
+
+    <!-- Urgent order assistance box with phone, WhatsApp & email -->
+    <div class="urgent-contact-box">
+      <h3><i class="fa-solid fa-phone-volume" style="color:var(--accent);"></i> Urgent Order Help</h3>
+      <p class="muted">Need an immediate answer or have an urgent order problem? Call, WhatsApp, or email the shop directly:</p>
+      <div class="urgent-actions">
+        <a href="tel:+233500111114" class="btn btn-dark btn-sm"><i class="fa-solid fa-phone"></i> Call 050 011 1114</a>
+        <a href="https://wa.me/233500111114?text=Hello%20KD%20Wisdom,%20I%20need%20urgent%20help%20with%20an%20order" target="_blank" class="btn btn-whatsapp btn-sm"><i class="fa-brands fa-whatsapp"></i> WhatsApp Shop</a>
+        <a href="mailto:davidkankam400@gmail.com" class="btn btn-outline btn-sm"><i class="fa-solid fa-envelope"></i> Email Us</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="kd-footer">
+    <p>KD Wisdom Enterprise · Kejetia Market, Kumasi, Ghana · <a href="tel:+233500111114">050 011 1114</a></p>
+    <p style="margin-top:8px;">
+      <a href="index.html">Shop</a> ·
+      <a href="about.html">About Us</a> ·
+      <a href="faq.html">FAQs</a> ·
+      <a href="contact.html">Contact Us</a> ·
+      <a href="terms.html">Terms of Service</a> ·
+      <a href="refund-policy.html">Refund &amp; Delivery Policy</a> ·
+      <a href="account.html">My Account</a>
+    </p>
+    <p style="margin-top:8px;">&copy; 2026 KD Wisdom Enterprise. All Rights Reserved.</p>
+  </footer>
+
+  <script type="module" src="js/messages.js"></script>
+</body>
+</html>

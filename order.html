@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Your Order — KD Wisdom Enterprise</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#121212">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="css/kd-pages.css">
+</head>
+<body>
+  <header class="kd-header">
+    <a href="index.html" class="brand-logo">KD Wisdom <span>Enterprise</span></a>
+    <nav class="kd-nav">
+      <a href="index.html">Shop</a>
+      <a href="index.html#wholesale">Wholesale</a>
+      <a href="about.html">About</a>
+      <a href="faq.html">FAQs</a>
+      <a href="contact.html">Contact</a>
+      <a href="messages.html"><i class="fa-regular fa-comments"></i> Chat</a>
+      <a href="account.html"><i class="fa-regular fa-user"></i> Account</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <div class="card pay-panel" id="loading-box">
+      <div class="spinner"></div>
+      <h2 style="justify-content:center;">Confirming your payment...</h2>
+      <p class="muted" id="loading-text">This usually takes a few seconds.</p>
+    </div>
+
+    <div class="card receipt" id="receipt" hidden></div>
+  </main>
+
+  <footer class="kd-footer">
+    <p>KD Wisdom Enterprise · Kejetia Market, Kumasi, Ghana · <a href="tel:+233500111114">050 011 1114</a></p>
+    <p style="margin-top:8px;">
+      <a href="index.html">Shop</a> ·
+      <a href="about.html">About Us</a> ·
+      <a href="faq.html">FAQs</a> ·
+      <a href="contact.html">Contact Us</a> ·
+      <a href="terms.html">Terms of Service</a> ·
+      <a href="refund-policy.html">Refund &amp; Delivery Policy</a> ·
+      <a href="account.html">My Account</a>
+    </p>
+    <p style="margin-top:8px;">&copy; 2026 KD Wisdom Enterprise. All Rights Reserved.</p>
+  </footer>
+
+  <script type="module" src="js/order.js"></script>
+</body>
+</html>
