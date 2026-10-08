@@ -638,7 +638,7 @@ function setupColorChips(containerId, inputId) {
     const list = getSelectedList().map(s => s.toLowerCase());
     container.querySelectorAll('.color-chip').forEach(chip => {
       const col = chip.getAttribute('data-color').toLowerCase();
-      const isActive = list.some(item => item === col || item.includes(col));
+      const isActive = list.some(item => item === col);
       chip.classList.toggle('active', isActive);
     });
   }

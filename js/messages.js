@@ -93,4 +93,25 @@ $('chat-form').addEventListener('submit', async (e) => {
   drawMessage(data);
 });
 
+$('btn-clear-chat')?.addEventListener('click', async () => {
+  if (!conv) return;
+  if (!confirm('Are you sure you want to clear your chat history? All messages in this conversation will be deleted.')) {
+    return;
+  }
+  const btn = $('btn-clear-chat');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Clearing...';
+  try {
+    const { error } = await supabase.from('messages').delete().eq('conversation_id', conv.id);
+    if (error) throw error;
+    seen.clear();
+    $('thread').innerHTML = '<div class="chat-empty">👋 Chat cleared. Send us a message anytime!</div>';
+  } catch (err) {
+    showAlert('Could not clear chat: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-trash-can"></i> Clear Chat';
+  }
+});
+
 start();

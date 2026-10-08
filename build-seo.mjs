@@ -139,7 +139,17 @@ ${extra}
 const footer = `
   <footer class="kd-footer">
     <p>${BRAND} · ${AREA} · <a href="tel:${PHONE_INTL}">${PHONE_LOCAL}</a></p>
-    <p style="margin-top:8px;"><a href="/">Shop</a> · <a href="/shop/">All Categories</a> · <a href="/about.html">About Us</a> · <a href="/account.html">My Account</a> · <a href="/refund-policy.html">Refund &amp; Delivery Policy</a></p>
+    <p style="margin-top:8px;">
+      <a href="/">Shop</a> ·
+      <a href="/shop/">All Categories</a> ·
+      <a href="/about.html">About Us</a> ·
+      <a href="/faq.html">FAQs</a> ·
+      <a href="/contact.html">Contact Us</a> ·
+      <a href="/terms.html">Terms of Service</a> ·
+      <a href="/privacy.html">Privacy Policy</a> ·
+      <a href="/refund-policy.html">Refund &amp; Delivery Policy</a> ·
+      <a href="/account.html">My Account</a>
+    </p>
     <p style="margin-top:8px;">&copy; 2026 ${BRAND}. All Rights Reserved.</p>
   </footer>
 </body>
@@ -191,6 +201,7 @@ const urls = [
   { loc: `${SITE}/faq.html`, pri: '0.7', freq: 'monthly' },
   { loc: `${SITE}/contact.html`, pri: '0.7', freq: 'monthly' },
   { loc: `${SITE}/terms.html`, pri: '0.5', freq: 'monthly' },
+  { loc: `${SITE}/privacy.html`, pri: '0.5', freq: 'monthly' },
   { loc: `${SITE}/refund-policy.html`, pri: '0.5', freq: 'monthly' }
 ];
 
@@ -256,6 +267,11 @@ for (const p of products) {
   const wsPrice = Number(p.wholesale_price) > 0 ? Number(p.wholesale_price) : 0;
   const wsMin = Math.max(parseInt(p.wholesale_min_qty, 10) || 3, 1);
   const blurb = String(p.description || '').trim() || `${p.name} from ${BRAND}.`;
+  const descColors = String(p.description || '').match(/(?:Available\s+)?Colors?:\s*([^\n\r]+)/i);
+  let pColors = [];
+  if (Array.isArray(p.colors) && p.colors.length) pColors = p.colors.map(s => String(s).trim()).filter(Boolean);
+  else if (typeof p.colors === 'string' && p.colors.trim()) pColors = p.colors.split(',').map(s => s.trim()).filter(Boolean);
+  else if (descColors) pColors = descColors[1].split(/[,/|]/).map(s => s.trim()).filter(Boolean);
   const metaDesc = `${p.name} - GHS ${money(p.price)}. ${blurb} Order online from ${BRAND}, ${AREA}. Delivery across Ghana or free pickup.`;
   const ld = [
     { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
@@ -285,6 +301,7 @@ for (const p of products) {
         <ul class="facts">
           ${cat ? `<li><b>Category:</b> <a href="/shop/${cat.slug}/" style="color:var(--accent-hover)">${esc(cat.seoName)}</a></li>` : ''}
           <li><b>Sizes:</b> ${SIZES.join(', ')}</li>
+          ${pColors.length ? `<li><b>Available Colors:</b> ${esc(pColors.join(', '))}</li>` : ''}
           ${wsPrice ? `<li><b>Wholesale price:</b> GHS ${money(wsPrice)} each when you buy ${wsMin} or more of this style (any sizes)</li>` : ''}
           <li><b>Pay with:</b> Mobile Money (MTN, Telecel, AirtelTigo) or card</li>
           <li><b>Delivery:</b> across Ghana, fee shown before you order, or free pickup at ${AREA}</li>

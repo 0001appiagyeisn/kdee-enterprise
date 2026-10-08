@@ -131,10 +131,10 @@ function getAvailableColors(prod) {
   if (nameDesc.includes('assorted') || nameDesc.includes('assortment')) {
     return ['Black', 'White', 'Navy Blue', 'Wine / Burgundy', 'Olive Green', 'Grey', 'Khaki / Beige'];
   }
-  // 4. Check for multiple prominent colors in name/description
+  // 4. Check for prominent colors in name/description
   const standardPalette = ['Black', 'Navy Blue', 'Khaki', 'White', 'Grey', 'Olive Green', 'Wine'];
   const detected = standardPalette.filter(c => nameDesc.includes(c.toLowerCase()));
-  if (detected.length > 1) {
+  if (detected.length > 0) {
     return detected;
   }
   return [];
@@ -251,8 +251,8 @@ function openFromLink() {
   const id = new URLSearchParams(location.search).get('p');
   if (!id) return;
   const prod = products.find((p) => String(p.id) === id);
-  history.replaceState(null, '', location.pathname + location.hash); // keep the address bar clean
-  if (prod && Number(prod.stock) > 0) openSizeDialog(prod);
+  history.replaceState(null, '', location.pathname + location.hash);
+  if (prod) openModal(prod);
 }
 
 // Load Products from Supabase
@@ -573,7 +573,9 @@ function openModal(prod, opts = {}) {
     if (prod.stock <= 0) return;
     const qty = parseInt(document.getElementById('modal-qty-input')?.value, 10) || 1;
     const prodColors = getAvailableColors(prod);
-    if (prodColors.length > 0 && !selectedColor) {
+    if (prodColors.length === 1 && !selectedColor) {
+      selectedColor = prodColors[0];
+    } else if (prodColors.length > 1 && !selectedColor) {
       showModalError('Please select a color before adding to cart.');
       return;
     }

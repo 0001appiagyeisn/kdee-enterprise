@@ -33,9 +33,14 @@
     <p class="lead">Ask about an item, size, color, delivery or your order. We reply as soon as we can.</p>
 
     <div class="card chat-card">
-      <div class="chat-head">
-        <b>KD Wisdom Enterprise</b>
-        <span class="muted"><i class="fa-solid fa-location-dot" style="color:var(--accent);"></i> Kejetia Market, Kumasi · Mon–Sat 7:00 AM – 5:00 PM (Google Verified)</span>
+      <div class="chat-head" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <div>
+          <b>KD Wisdom Enterprise</b>
+          <span class="muted" style="display:block;margin-top:2px;"><i class="fa-solid fa-location-dot" style="color:var(--accent);"></i> Kejetia Market, Kumasi · Mon–Sat 7:00 AM – 5:00 PM (Google Verified)</span>
+        </div>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-clear-chat" style="font-size:0.75rem;padding:4px 10px;border-color:#ccc;color:#666;" title="Clear your chat history">
+          <i class="fa-solid fa-trash-can"></i> Clear Chat
+        </button>
       </div>
       <div class="chat-thread" id="thread"><div class="chat-empty">Loading...</div></div>
       <div class="alert" id="chat-alert" style="margin:0;border-radius:0;"></div>
@@ -66,6 +71,7 @@
       <a href="faq.html">FAQs</a> ·
       <a href="contact.html">Contact Us</a> ·
       <a href="terms.html">Terms of Service</a> ·
+      <a href="privacy.html">Privacy Policy</a> ·
       <a href="refund-policy.html">Refund &amp; Delivery Policy</a> ·
       <a href="account.html">My Account</a>
     </p>
