@@ -341,8 +341,9 @@
     <button type="button" data-tab="inventory" class="active"><i class="fa-solid fa-boxes-stacked"></i> Inventory</button>
     <button type="button" data-tab="orders"><i class="fa-solid fa-receipt"></i> Orders <span class="tab-badge" id="orders-badge" hidden></span></button>
     <button type="button" data-tab="customers"><i class="fa-solid fa-users"></i> Customers</button>
+    <button type="button" data-tab="transport"><i class="fa-solid fa-truck-fast"></i> Transport &amp; Routes</button>
     <button type="button" data-tab="messages"><i class="fa-regular fa-comments"></i> Messages <span class="tab-badge" id="msg-badge" hidden></span></button>
-    <button type="button" data-tab="settings"><i class="fa-solid fa-gear"></i> Delivery &amp; Settings</button>
+    <button type="button" data-tab="settings"><i class="fa-solid fa-gear"></i> Store Settings</button>
   </nav>
 
   <div class="admin-tab" id="tab-inventory">
@@ -611,6 +612,129 @@
     </main>
   </div>
 
+  <!-- ===== Transport & Routes (Dedicated Tab) ===== -->
+  <div class="admin-tab" id="tab-transport" hidden>
+    <main class="orders-wrap">
+      <!-- 1. Route Simulator & Checkpoint Calibrator -->
+      <section class="admin-card">
+        <h2><i class="fa-solid fa-map-location-dot"></i> Route Fare Simulator &amp; Checkpoint Calibrator</h2>
+        <p class="img-hint" style="margin-bottom:14px;">Set <b>Point A (Shop)</b> and <b>Point B (Destination)</b> on the map or search a town. Test what the system calculates, then improvise the actual accepted fare and save it as a permanent checkpoint for that town.</p>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label><i class="fa-solid fa-store"></i> Point A: Shop Origin</label>
+            <input type="text" id="sim-origin" value="KD Wisdom Enterprise (Kejetia Market, Kumasi)" readonly style="background:#f4f4f4;">
+          </div>
+          <div class="form-group">
+            <label><i class="fa-solid fa-location-dot"></i> Point B: Destination (Search or tap map)</label>
+            <div class="shop-search">
+              <input type="text" id="sim-dest-search" placeholder="e.g. Gyapa, Wassa Akropong, Accra, Takoradi, Sunyani, Tamale...">
+              <button type="button" id="sim-dest-btn"><i class="fa-solid fa-magnifying-glass"></i></button>
+            </div>
+            <ul class="shop-results" id="sim-dest-results"></ul>
+          </div>
+        </div>
+
+        <!-- Quick Landmark Chips -->
+        <div class="color-chips-section" style="margin-top:-6px;margin-bottom:12px;">
+          <div class="color-chips-title">Quick Test Towns in Ghana:</div>
+          <div class="color-chips" id="sim-quick-chips">
+            <span class="color-chip" data-name="Accra" data-lat="5.6037" data-lng="-0.1870">Accra (~260 km)</span>
+            <span class="color-chip" data-name="Gyapa (Wassa)" data-lat="5.8500" data-lng="-2.1500">Gyapa (121.5 km)</span>
+            <span class="color-chip" data-name="Wassa Akropong" data-lat="5.7833" data-lng="-2.0833">Wassa Akropong (137.9 km)</span>
+            <span class="color-chip" data-name="Takoradi" data-lat="4.8986" data-lng="-1.7583">Takoradi (215 km)</span>
+            <span class="color-chip" data-name="Sunyani" data-lat="7.3400" data-lng="-2.3200">Sunyani (128 km)</span>
+            <span class="color-chip" data-name="Tamale" data-lat="9.4008" data-lng="-0.8393">Tamale (385 km)</span>
+            <span class="color-chip" data-name="Cape Coast" data-lat="5.1054" data-lng="-1.2466">Cape Coast (160 km)</span>
+            <span class="color-chip" data-name="Adum" data-lat="6.6910" data-lng="-1.6230">Adum (2 km)</span>
+            <span class="color-chip" data-name="KNUST" data-lat="6.6745" data-lng="-1.5716">KNUST (8 km)</span>
+          </div>
+        </div>
+
+        <div id="sim-map" style="height:340px;border-radius:6px;border:1px solid var(--border);margin-bottom:14px;z-index:1;"></div>
+
+        <!-- Simulation Results & Improvise Box -->
+        <div id="sim-card-body" style="background:#faf9f6;border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:15px;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:12px;margin-bottom:14px;">
+            <div style="background:#fff;padding:10px;border-radius:6px;border:1px solid var(--border);text-align:center;">
+              <small class="muted" style="display:block;font-size:0.75rem;">ROAD DISTANCE</small>
+              <b style="font-size:1.15rem;color:var(--primary);" id="sim-stat-km">-- km</b>
+            </div>
+            <div style="background:#fff;padding:10px;border-radius:6px;border:1px solid var(--border);text-align:center;">
+              <small class="muted" style="display:block;font-size:0.75rem;">EST. TRAVEL TIME</small>
+              <b style="font-size:1.15rem;color:var(--primary);" id="sim-stat-time">-- min</b>
+            </div>
+            <div style="background:#fff;padding:10px;border-radius:6px;border:1px solid var(--border);text-align:center;">
+              <small class="muted" style="display:block;font-size:0.75rem;">ROAD / CORRIDOR</small>
+              <b style="font-size:0.95rem;color:var(--accent);" id="sim-stat-corridor">--</b>
+            </div>
+            <div style="background:#fff;padding:10px;border-radius:6px;border:1px solid #ecdca0;background:#fffdf3;text-align:center;">
+              <small class="muted" style="display:block;font-size:0.75rem;">SYSTEM PRESET FARE</small>
+              <b style="font-size:1.25rem;color:#b26a00;" id="sim-stat-preset">--</b>
+            </div>
+          </div>
+
+          <!-- Improvise / Calibration Controls -->
+          <div style="background:#ffffff;border:1px solid var(--accent);border-radius:6px;padding:14px;">
+            <h4 style="font-size:0.95rem;margin-bottom:8px;color:var(--primary);"><i class="fa-solid fa-sliders"></i> Improvise &amp; Save Accepted Fare</h4>
+            <p class="img-hint" style="margin-bottom:10px;">If the system's preset doesn't match what drivers or station cars actually charge for this area, write the accepted fare here and save it as a permanent checkpoint.</p>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Checkpoint Town / Area Name</label>
+                <input type="text" id="sim-cp-name" placeholder="e.g. Gyapa (Wassa Amenfi)">
+              </div>
+              <div class="form-group">
+                <label>Actual / Accepted Fare (GHS)</label>
+                <input type="number" step="1" id="sim-cp-fare" placeholder="e.g. 150">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Coverage Radius around town (km)</label>
+                <input type="number" id="sim-cp-radius" value="15" min="2" max="60">
+              </div>
+              <div class="form-group" style="display:flex;align-items:flex-end;">
+                <button type="button" class="btn-action btn-save" id="btn-save-checkpoint" style="width:100%;height:44px;font-size:0.9rem;font-weight:700;">
+                  <i class="fa-solid fa-floppy-disk"></i> Save Location Checkpoint
+                </button>
+              </div>
+            </div>
+            <div id="sim-cp-feedback" class="ai-status" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Saved Town Checkpoints Table -->
+      <section class="admin-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+          <div>
+            <h2><i class="fa-solid fa-signs-post"></i> Saved Town Checkpoints (Custom Overrides)</h2>
+            <p class="img-hint" style="margin:0;">When a customer pins an address or enters a town in this list, the store quotes your exact accepted fare directly.</p>
+          </div>
+          <button type="button" class="btn-action btn-edit" id="btn-reset-checkpoints" title="Reset to standard defaults">
+            <i class="fa-solid fa-rotate-left"></i> Restore Default Checkpoints
+          </button>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table class="fee-table" id="table-checkpoints" style="font-size:0.88rem;">
+            <thead>
+              <tr style="background:#f4f4f4;">
+                <th>Town / Checkpoint</th>
+                <th>Distance</th>
+                <th>Corridor Type</th>
+                <th>Coverage Radius</th>
+                <th>Accepted Fare</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="cp-list-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
   <!-- ===== Settings ===== -->
   <div class="admin-tab" id="tab-settings" hidden>
     <main class="orders-wrap">
@@ -662,19 +786,35 @@
           </div>
           <p class="img-hint">The two traffic factors only apply when live Google traffic is not set up (1.15 = 15% slower than an empty road; rush hours are about 6:30-9:30am and 4-7:30pm, Mon-Sat). With Google traffic, the real predicted time is used instead.</p>
 
-          <h3 style="font-size:0.95rem;margin:14px 0 6px;"><i class="fa-solid fa-road"></i> Road &amp; Terrain Settings (Admin Internal Buffer)</h3>
-          <p class="img-hint" style="margin-bottom:10px;">Compensates riders for untarred roads, rough terrain, and Kejetia market congestion internally so the price is accurate without showing an extra surcharge to the customer.</p>
+          <h3 style="font-size:0.95rem;margin:14px 0 6px;"><i class="fa-solid fa-road"></i> Intercity Corridors &amp; Road Condition Settings (Admin Internal)</h3>
+          <p class="img-hint" style="margin-bottom:10px;">Set fair rates for different road qualities across Ghana (Accra VIP highway, Wassa rough roads, and other regions) so prices are accurate without showing extra surcharges to customers.</p>
           <div class="form-row">
             <div class="form-group">
-              <label>Terrain &amp; Bad Road Buffer (1.0 = normal, 1.25 = +25% buffer)</label>
-              <input type="number" step="0.05" id="s-terrain_factor" min="1.0" max="2.5" value="1.25">
+              <label>Accra Bus Parcel Rate (GHS, ~260 km VIP/STC)</label>
+              <input type="number" step="5" id="s-accra_flat_fee" min="80" max="250" value="120">
             </div>
             <div class="form-group">
-              <label>Intercity Bus Parcel Rate (GHS, &gt;35 km)</label>
+              <label>Rough/Untarred Road Rate per km (Wassa Corridor, GHS)</label>
+              <input type="number" step="0.01" id="s-rough_road_per_km" min="0.50" max="3.00" value="1.22">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Standard Intercity Rate per km (&gt;35 km, GHS)</label>
+              <input type="number" step="0.01" id="s-intercity_per_km" min="0.10" max="2.00" value="0.38">
+            </div>
+            <div class="form-group">
+              <label>Base Intercity Parcel Rate (GHS, at 35 km)</label>
               <input type="number" step="1" id="s-intercity_flat_fee" min="20" max="300" value="50">
             </div>
           </div>
-          <label class="o-check"><input type="checkbox" id="s-intercity_enabled" checked> Enable Bus Parcel Rate for trips beyond 35 km (VIP / STC bus dispatch to other regions)</label>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Local Terrain &amp; Bad Road Buffer (1.25 = +25% buffer for Kumasi trips)</label>
+              <input type="number" step="0.05" id="s-terrain_factor" min="1.0" max="2.5" value="1.25">
+            </div>
+          </div>
+          <label class="o-check"><input type="checkbox" id="s-intercity_enabled" checked> Enable Bus Parcel &amp; Corridor Rates for trips beyond 35 km (Accra, Wassa &amp; other regions)</label>
 
           <div id="fee-examples"></div>
           <label class="o-check"><input type="checkbox" id="s-pickup_enabled"> Allow pickup at the shop</label>

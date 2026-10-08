@@ -144,7 +144,83 @@ function estimateDistanceKm(lat1, lon1, lat2, lon2) {
   return R * c * 1.35; // account for Ghana road routes
 }
 
-function calculateClientQuote(km, minutes) {
+function detectCorridor(lat, lng, address) {
+  const addr = String(address || '').toLowerCase();
+  // 1. Greater Accra Highway Corridor (Accra, Tema, Kasoa, etc.)
+  if (
+    (typeof lat === 'number' && lat >= 5.40 && lat <= 6.00 && typeof lng === 'number' && lng >= -0.65 && lng <= 0.20) ||
+    /accra|tema|kasoa|madina|adenta|spintex|dansoman|kaneshie|circle|legon|ashaiman/.test(addr)
+  ) {
+    return 'accra';
+  }
+  // 2. Wassa & Western Rough/Untarred Road Corridor (Gyapa, Wassa Akropong, Amenfi, Bogoso, Prestea, Tarkwa, etc.)
+  if (
+    (typeof lat === 'number' && lat >= 5.10 && lat <= 6.45 && typeof lng === 'number' && lng >= -2.90 && lng <= -1.80) ||
+    /wassa|gyapa|akropong|amenfi|bogoso|prestea|tarkwa|asankragwa|manso|enchi|dadieso|sefwi|juaboso|bia|western/.test(addr)
+  ) {
+    return 'rough_road';
+  }
+  // 3. Standard intercity corridor
+  return 'standard_intercity';
+}
+
+const DEFAULT_CHECKPOINTS = [
+  { id: 'cp-accra', name: 'Greater Accra (Circle, Kaneshie, Tema, Madina)', lat: 5.6037, lng: -0.1870, radius_km: 30, fare: 120, corridor: 'Accra Highway VIP', keywords: ['accra', 'tema', 'kasoa', 'madina', 'adenta', 'spintex', 'dansoman', 'kaneshie', 'accra circle', 'legon'] },
+  { id: 'cp-akropong', name: 'Wassa Akropong', lat: 5.7833, lng: -2.0833, radius_km: 15, fare: 170, corridor: 'Rough Road Corridor', keywords: ['akropong', 'wassa akropong'] },
+  { id: 'cp-gyapa', name: 'Gyapa at Wassa (Amenfi)', lat: 5.8500, lng: -2.1500, radius_km: 15, fare: 150, corridor: 'Rough Road Corridor', keywords: ['gyapa', 'gyapa at wassa'] },
+  { id: 'cp-takoradi', name: 'Takoradi (Market Circle)', lat: 4.8986, lng: -1.7583, radius_km: 20, fare: 110, corridor: 'Intercity Bus', keywords: ['takoradi', 'sekondi', 'market circle'] },
+  { id: 'cp-sunyani', name: 'Sunyani (Main Station)', lat: 7.3400, lng: -2.3200, radius_km: 20, fare: 85, corridor: 'Intercity Bus', keywords: ['sunyani'] },
+  { id: 'cp-tamale', name: 'Tamale (Central Station)', lat: 9.4008, lng: -0.8393, radius_km: 25, fare: 180, corridor: 'Northern Intercity Bus', keywords: ['tamale'] },
+  { id: 'cp-capecoast', name: 'Cape Coast', lat: 5.1054, lng: -1.2466, radius_km: 20, fare: 100, corridor: 'Intercity Bus', keywords: ['cape coast', 'elmina'] }
+];
+
+function getSavedCheckpoints() {
+  let list = [];
+  try { list = JSON.parse(localStorage.getItem('kd_saved_checkpoints') || '[]'); } catch(e) {}
+  if (!Array.isArray(list) || list.length === 0) {
+    list = [...DEFAULT_CHECKPOINTS];
+  }
+  return list;
+}
+
+function matchCheckpoint(lat, lng, address) {
+  const list = getSavedCheckpoints();
+  const addr = String(address || '').toLowerCase();
+  let closestCp = null;
+  let minDistance = Infinity;
+
+  // 1. First priority: GPS coordinate distance (find closest checkpoint within radius)
+  if (typeof lat === 'number' && typeof lng === 'number') {
+    for (const cp of list) {
+      if (cp.lat && cp.lng) {
+        const d = estimateDistanceKm(lat, lng, cp.lat, cp.lng);
+        if (d <= (cp.radius_km || 15) && d < minDistance) {
+          minDistance = d;
+          closestCp = cp;
+        }
+      }
+    }
+    if (closestCp) return closestCp;
+  }
+
+  // 2. Second priority: Address keyword match
+  if (addr) {
+    for (const cp of list) {
+      if (Array.isArray(cp.keywords) && cp.keywords.some((k) => addr.includes(k))) {
+        return cp;
+      }
+    }
+  }
+  return null;
+}
+
+function calculateClientQuote(km, minutes, lat, lng, address) {
+  // Check if destination matches any Saved Town Checkpoint (exact admin override)
+  const matchedCp = matchCheckpoint(lat, lng, address);
+  if (matchedCp) {
+    return matchedCp.fare;
+  }
+
   const st = settings || {};
   let transportLocal = {};
   try { transportLocal = JSON.parse(localStorage.getItem('kd_transport_settings') || '{}'); } catch(e) {}
@@ -157,12 +233,23 @@ function calculateClientQuote(km, minutes) {
   const longPerKm = Math.max(Number(st.long_per_km) || 0.8, 0.4);
   const terrainFactor = Math.max(Number(st.terrain_factor ?? transportLocal.terrain_factor) || 1.25, 1.0);
   const intercityFee = Number(st.intercity_flat_fee ?? transportLocal.intercity_flat_fee) || 50;
+  const intercityPerKm = Math.max(Number(st.intercity_per_km ?? transportLocal.intercity_per_km) || 0.38, 0.1);
+  const accraFlatFee = Number(st.accra_flat_fee ?? transportLocal.accra_flat_fee) || 120;
+  const roughRoadPerKm = Math.max(Number(st.rough_road_per_km ?? transportLocal.rough_road_per_km) || 1.22, 0.5);
   const intercityEnabled = (st.intercity_enabled ?? transportLocal.intercity_enabled) !== false;
   const step = Number(st.round_to) > 0 ? Number(st.round_to) : 5;
 
   if (intercityEnabled && km > 35) {
-    let fee = intercityFee;
-    if (km > 100) fee += Math.ceil((km - 100) / 50) * 5;
+    const corridor = detectCorridor(lat, lng, address);
+    if (corridor === 'accra') {
+      return Math.ceil(accraFlatFee / step) * step;
+    }
+    if (corridor === 'rough_road') {
+      const fee = km * roughRoadPerKm;
+      return Math.ceil(fee / step) * step;
+    }
+    // Standard Intercity route (e.g. 188 km)
+    const fee = intercityFee + ((km - 35) * intercityPerKm);
     return Math.ceil(fee / step) * step;
   }
 
@@ -182,13 +269,14 @@ async function getQuote() {
   const box = $('quote-box');
   box.className = 'quote-box show';
   box.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Calculating delivery fee...';
+  const addr = $('c-address') ? $('c-address').value.trim() : '';
   try {
     const res = await callFn('checkout', { action: 'quote', delivery: { method: 'delivery', lat: pin.lat, lng: pin.lng } });
     if (seq !== quoteSeq) return;
     quote = res.delivery;
-    // If distance is intercity (> 35 km), apply bus parcel rate if more fair
+    // If distance is intercity (> 35 km), apply bus parcel / corridor rate
     if (quote && quote.km > 35) {
-      const fairIntercity = calculateClientQuote(quote.km, quote.minutes);
+      const fairIntercity = calculateClientQuote(quote.km, quote.minutes, pin.lat, pin.lng, addr);
       if (fairIntercity > 0) quote.fee = fairIntercity;
     }
     const hrs = Math.floor(quote.minutes / 60), mins = quote.minutes % 60;
@@ -201,7 +289,7 @@ async function getQuote() {
     const km = Math.max(parseFloat(estimateDistanceKm(shop.lat, shop.lng, pin.lat, pin.lng).toFixed(1)), 1);
     const speedKmH = km > 35 ? 55 : (km > 15 ? 35 : 25);
     const minutes = Math.max(Math.round((km / speedKmH) * 60), 10);
-    const fee = calculateClientQuote(km, minutes);
+    const fee = calculateClientQuote(km, minutes, pin.lat, pin.lng, addr);
     quote = { fee, km, minutes, source: 'estimate' };
     const hrs = Math.floor(minutes / 60), mins = minutes % 60;
     const time = hrs ? `${hrs} h ${mins} min` : `${mins} min`;
@@ -216,6 +304,16 @@ async function reverseGeocode(lat, lng) {
     const d = await r.json();
     if (d && d.display_name && !$('c-address').value.trim()) {
       $('c-address').value = d.display_name.split(',').slice(0, 3).join(',').trim();
+      if (quote && quote.km > 35) {
+        const fairIntercity = calculateClientQuote(quote.km, quote.minutes, pin.lat, pin.lng, $('c-address').value);
+        if (fairIntercity > 0 && fairIntercity !== quote.fee) {
+          quote.fee = fairIntercity;
+          updateTotals();
+          const hrs = Math.floor(quote.minutes / 60), mins = quote.minutes % 60;
+          const time = hrs ? `${hrs} h ${mins} min` : `${mins} min`;
+          $('quote-box').innerHTML = `<b>Delivery fee: ${money(quote.fee)}</b><br>About ${quote.km} km · roughly ${time} from our shop${quote.source === 'google' ? ' (with current traffic)' : (quote.source === 'estimate' ? ' (estimated)' : '')}.`;
+        }
+      }
     }
   } catch (e) { /* the customer can type it */ }
 }
@@ -284,6 +382,19 @@ $('locate-btn').addEventListener('click', () => {
     () => { btn.disabled = false; alert('Could not get your location. Please allow location access, or search / tap the map.'); },
     { enableHighAccuracy: true, timeout: 15000 }
   );
+});
+
+$('c-address')?.addEventListener('change', () => {
+  if (quote && quote.km > 35 && pin) {
+    const fairIntercity = calculateClientQuote(quote.km, quote.minutes, pin.lat, pin.lng, $('c-address').value);
+    if (fairIntercity > 0 && fairIntercity !== quote.fee) {
+      quote.fee = fairIntercity;
+      updateTotals();
+      const hrs = Math.floor(quote.minutes / 60), mins = quote.minutes % 60;
+      const time = hrs ? `${hrs} h ${mins} min` : `${mins} min`;
+      $('quote-box').innerHTML = `<b>Delivery fee: ${money(quote.fee)}</b><br>About ${quote.km} km · roughly ${time} from our shop${quote.source === 'google' ? ' (with current traffic)' : (quote.source === 'estimate' ? ' (estimated)' : '')}.`;
+    }
+  }
 });
 
 // ---------- Payment method ----------

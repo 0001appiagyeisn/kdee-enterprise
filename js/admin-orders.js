@@ -1,7 +1,7 @@
 // Admin: Orders, Customers and Settings tabs (works alongside admin.js, which handles login + inventory)
 import { supabase } from './supabase-config.js';
 import { initPhoneInputs, setPhone, isValidGhPhone } from './phone-input.js';
-import { searchPlaces, parseCoords, looksLikeMapLink } from './place-search.js';
+import { searchPlaces, parseCoords, looksLikeMapLink, distanceKm } from './place-search.js';
 
 const $ = (id) => document.getElementById(id);
 const STATUS = {
@@ -50,6 +50,7 @@ function showTab(name) {
   if (!isAdmin) return;
   if (name === 'orders') loadOrders();
   if (name === 'customers') loadCustomers();
+  if (name === 'transport') loadTransportTab();
   if (name === 'settings') loadSettings();
 }
 document.querySelectorAll('.admin-tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
@@ -352,11 +353,14 @@ async function loadSettings() {
   $('s-chat_forward_enabled').checked = data.chat_forward_enabled !== false;
   ['s-owner_whatsapp', 's-owner_phone'].forEach((id) => setPhone($(id), $(id).value));
 
-  // Load custom terrain and intercity parcel settings (from db if columns exist, or localStorage)
+  // Load custom terrain, corridor and intercity parcel settings (from db if columns exist, or localStorage)
   let transportLocal = {};
   try { transportLocal = JSON.parse(localStorage.getItem('kd_transport_settings') || '{}'); } catch(e) {}
   if ($('s-terrain_factor')) $('s-terrain_factor').value = data.terrain_factor ?? transportLocal.terrain_factor ?? 1.25;
   if ($('s-intercity_flat_fee')) $('s-intercity_flat_fee').value = data.intercity_flat_fee ?? transportLocal.intercity_flat_fee ?? 50;
+  if ($('s-intercity_per_km')) $('s-intercity_per_km').value = data.intercity_per_km ?? transportLocal.intercity_per_km ?? 0.38;
+  if ($('s-accra_flat_fee')) $('s-accra_flat_fee').value = data.accra_flat_fee ?? transportLocal.accra_flat_fee ?? 120;
+  if ($('s-rough_road_per_km')) $('s-rough_road_per_km').value = data.rough_road_per_km ?? transportLocal.rough_road_per_km ?? 1.23;
   if ($('s-intercity_enabled')) $('s-intercity_enabled').checked = (data.intercity_enabled ?? transportLocal.intercity_enabled) !== false;
 
   if (data.base_fee === undefined) $('set-msg').textContent = '⚠️ Run database-update-4.sql in Supabase before saving the new delivery prices.';
@@ -364,8 +368,28 @@ async function loadSettings() {
   initShopMap();
 }
 
-// What a customer would pay for some typical trips (same formula as the server)
-function calcFee(km, minutes) {
+function detectCorridor(lat, lng, address) {
+  const addr = String(address || '').toLowerCase();
+  // 1. Greater Accra Highway Corridor (Accra, Tema, Kasoa, etc.)
+  if (
+    (typeof lat === 'number' && lat >= 5.40 && lat <= 6.00 && typeof lng === 'number' && lng >= -0.65 && lng <= 0.20) ||
+    /accra|tema|kasoa|madina|adenta|spintex|dansoman|kaneshie|circle|legon|ashaiman/.test(addr)
+  ) {
+    return 'accra';
+  }
+  // 2. Wassa & Western Rough/Untarred Road Corridor (Gyapa, Wassa Akropong, Amenfi, Bogoso, Prestea, Tarkwa, etc.)
+  if (
+    (typeof lat === 'number' && lat >= 5.10 && lat <= 6.45 && typeof lng === 'number' && lng >= -2.90 && lng <= -1.80) ||
+    /wassa|gyapa|akropong|amenfi|bogoso|prestea|tarkwa|asankragwa|manso|enchi|dadieso|sefwi|juaboso|bia|western/.test(addr)
+  ) {
+    return 'rough_road';
+  }
+  // 3. Standard intercity corridor
+  return 'standard_intercity';
+}
+
+// What a customer would pay for some typical trips (same formula as the client checkout)
+function calcFee(km, minutes, lat, lng, address) {
   const v = (id) => Number($(id)?.value) || 0;
   const isChecked = (id) => $(id)?.checked ?? true;
 
@@ -377,16 +401,30 @@ function calcFee(km, minutes) {
   const longPerKm = Math.max(v('s-long_per_km') || 0.8, 0.4);
   const terrainFactor = Math.max(v('s-terrain_factor') || 1.25, 1.0);
   const intercityFee = v('s-intercity_flat_fee') || 50;
+  const intercityPerKm = Math.max(v('s-intercity_per_km') || 0.38, 0.1);
+  const accraFlatFee = v('s-accra_flat_fee') || 120;
+  const roughRoadPerKm = Math.max(v('s-rough_road_per_km') || 1.22, 0.5);
   const intercityEnabled = isChecked('s-intercity_enabled');
   const step = v('s-round_to') > 0 ? v('s-round_to') : 1;
 
-  // Intercity trips (> 35 km, e.g. Kumasi to Accra, Takoradi, Sunyani, Tamale):
-  // Dispatched via VIP / STC bus terminal with flat parcel rate
+  // Check if destination matches any Saved Town Checkpoint (exact admin override)
+  const matchedCp = matchCheckpoint(lat, lng, address);
+  if (matchedCp) {
+    return matchedCp.fare;
+  }
+
+  // Intercity trips (> 35 km, e.g. Kumasi to Accra, Takoradi, Sunyani, Wassa, Tamale)
   if (intercityEnabled && km > 35) {
-    let fee = intercityFee;
-    if (km > 100) {
-      fee += Math.ceil((km - 100) / 50) * 5; // +5 GHS per 50 km past 100 km
+    const corridor = detectCorridor(lat, lng, address);
+    if (corridor === 'accra') {
+      return Math.ceil(accraFlatFee / step) * step;
     }
+    if (corridor === 'rough_road') {
+      const fee = km * roughRoadPerKm;
+      return Math.ceil(fee / step) * step;
+    }
+    // Standard Intercity (VIP/STC bus to other regions)
+    const fee = intercityFee + ((km - 35) * intercityPerKm);
     return Math.ceil(fee / step) * step;
   }
 
@@ -405,18 +443,20 @@ function calcFee(km, minutes) {
 
 function updateFeeExamples() {
   const trips = [
-    [2, 8, 'Nearby, 2 km (8 min)'],
-    [8, 20, 'Across town, 8 km (20 min)'],
-    [25, 40, 'Outskirts, 25 km (40 min)'],
-    [90, 120, 'Another region, 90 km (2 h - STC/VIP Bus parcel)'],
-    [260, 270, 'Kumasi to Accra, 260 km (4 h 30 - STC/VIP Bus parcel)']
+    [2, 8, 'Nearby (Adum), 2 km (8 min)', null, null, 'Adum, Kumasi'],
+    [8, 20, 'Across town (KNUST), 8 km (20 min)', null, null, 'KNUST, Kumasi'],
+    [25, 40, 'Outskirts (Ejisu), 25 km (40 min)', null, null, 'Ejisu'],
+    [188.66, 290, 'Standard Intercity, 188.7 km (~4 h 50 min)', 6.2, -0.6, 'Eastern Region'],
+    [260, 270, 'Greater Accra (VIP/STC Highway), 260 km', 5.6, -0.2, 'Accra, Greater Accra'],
+    [121.5, 230, 'Gyapa at Wassa (Rough Road Corridor), 121.5 km', 5.85, -2.15, 'Gyapa, Wassa'],
+    [137.89, 260, 'Wassa Akropong (Rough Road Corridor), 137.9 km', 5.78, -2.09, 'Wassa Akropong, Western']
   ];
   $('fee-examples').innerHTML = '<table class="fee-table"><tr><th>Example trip</th><th>Customer pays</th></tr>' +
-    trips.map(([km, m, t]) => `<tr><td>${t}</td><td><b>GHS ${calcFee(km, m)}</b></td></tr>`).join('') + '</table>' +
-    '<p class="img-hint">Calculated with your road/terrain buffer and bus parcel rates. Adjust the numbers above to set fair prices.</p>';
+    trips.map(([km, m, t, lat, lng, addr]) => `<tr><td>${t}</td><td><b>GHS ${calcFee(km, m, lat, lng, addr)}</b></td></tr>`).join('') + '</table>' +
+    '<p class="img-hint">Calculated with your road/terrain settings, corridor caps and parcel rates. Adjust the numbers above to set fair prices.</p>';
   $('map-check').href = `https://www.google.com/maps?q=${$('s-shop_lat').value},${$('s-shop_lng').value}`;
 }
-['s-base_fee', 's-min_fee', 's-per_km', 's-per_minute', 's-long_km_threshold', 's-long_per_km', 's-round_to', 's-shop_lat', 's-shop_lng', 's-terrain_factor', 's-intercity_flat_fee']
+['s-base_fee', 's-min_fee', 's-per_km', 's-per_minute', 's-long_km_threshold', 's-long_per_km', 's-round_to', 's-shop_lat', 's-shop_lng', 's-terrain_factor', 's-intercity_flat_fee', 's-intercity_per_km', 's-accra_flat_fee', 's-rough_road_per_km']
   .forEach((id) => $(id)?.addEventListener('input', updateFeeExamples));
 $('s-intercity_enabled')?.addEventListener('change', updateFeeExamples);
 
@@ -548,6 +588,9 @@ $('settings-form')?.addEventListener('submit', async (e) => {
   const transportSettings = {
     terrain_factor: parseFloat($('s-terrain_factor')?.value) || 1.25,
     intercity_flat_fee: parseFloat($('s-intercity_flat_fee')?.value) || 50,
+    intercity_per_km: parseFloat($('s-intercity_per_km')?.value) || 0.38,
+    accra_flat_fee: parseFloat($('s-accra_flat_fee')?.value) || 120,
+    rough_road_per_km: parseFloat($('s-rough_road_per_km')?.value) || 1.23,
     intercity_enabled: $('s-intercity_enabled')?.checked ?? true
   };
   try { localStorage.setItem('kd_transport_settings', JSON.stringify(transportSettings)); } catch(e) {}
@@ -610,3 +653,288 @@ supabase.auth.onAuthStateChange((event) => {
 });
 
 initPhoneInputs();
+
+// ==================== Dedicated Transport & Checkpoint Calibrator ====================
+const DEFAULT_CHECKPOINTS = [
+  { id: 'cp-accra', name: 'Greater Accra (Circle, Kaneshie, Tema, Madina)', lat: 5.6037, lng: -0.1870, radius_km: 30, fare: 120, corridor: 'Accra Highway VIP', keywords: ['accra', 'tema', 'kasoa', 'madina', 'adenta', 'spintex', 'dansoman', 'kaneshie', 'circle', 'legon'] },
+  { id: 'cp-gyapa', name: 'Gyapa at Wassa (Amenfi)', lat: 5.8500, lng: -2.1500, radius_km: 15, fare: 150, corridor: 'Rough Road Corridor', keywords: ['gyapa', 'wassa', 'amenfi'] },
+  { id: 'cp-akropong', name: 'Wassa Akropong', lat: 5.7833, lng: -2.0833, radius_km: 15, fare: 170, corridor: 'Rough Road Corridor', keywords: ['akropong', 'wassa akropong'] },
+  { id: 'cp-takoradi', name: 'Takoradi (Market Circle)', lat: 4.8986, lng: -1.7583, radius_km: 20, fare: 110, corridor: 'Intercity Bus', keywords: ['takoradi', 'sekondi'] },
+  { id: 'cp-sunyani', name: 'Sunyani (Main Station)', lat: 7.3400, lng: -2.3200, radius_km: 20, fare: 85, corridor: 'Intercity Bus', keywords: ['sunyani'] },
+  { id: 'cp-tamale', name: 'Tamale (Central Station)', lat: 9.4008, lng: -0.8393, radius_km: 25, fare: 180, corridor: 'Northern Intercity Bus', keywords: ['tamale'] },
+  { id: 'cp-capecoast', name: 'Cape Coast', lat: 5.1054, lng: -1.2466, radius_km: 20, fare: 100, corridor: 'Intercity Bus', keywords: ['cape coast', 'elmina'] }
+];
+
+function getSavedCheckpoints() {
+  let list = [];
+  try { list = JSON.parse(localStorage.getItem('kd_saved_checkpoints') || '[]'); } catch(e) {}
+  if (!Array.isArray(list) || list.length === 0) {
+    list = [...DEFAULT_CHECKPOINTS];
+    try { localStorage.setItem('kd_saved_checkpoints', JSON.stringify(list)); } catch(e) {}
+  }
+  return list;
+}
+
+function saveCheckpoints(list) {
+  try { localStorage.setItem('kd_saved_checkpoints', JSON.stringify(list)); } catch(e) {}
+  renderCheckpointsTable();
+}
+
+function matchCheckpoint(lat, lng, address) {
+  const list = getSavedCheckpoints();
+  const addr = String(address || '').toLowerCase();
+  for (const cp of list) {
+    if (typeof lat === 'number' && typeof lng === 'number' && cp.lat && cp.lng) {
+      const d = distanceKm({ lat, lng }, { lat: cp.lat, lng: cp.lng }) * 1.35;
+      if (d <= (cp.radius_km || 15)) return cp;
+    }
+    if (addr && Array.isArray(cp.keywords) && cp.keywords.some((k) => addr.includes(k))) {
+      return cp;
+    }
+  }
+  return null;
+}
+
+function renderCheckpointsTable() {
+  const list = getSavedCheckpoints();
+  const tbody = $('cp-list-body');
+  if (!tbody) return;
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:14px;">No saved checkpoints yet. Use the simulator above to add towns.</td></tr>';
+    return;
+  }
+  const shopLat = parseFloat($('s-shop_lat')?.value) || 6.6966;
+  const shopLng = parseFloat($('s-shop_lng')?.value) || -1.6225;
+
+  tbody.innerHTML = list.map((cp, idx) => {
+    const d = (distanceKm({ lat: shopLat, lng: shopLng }, { lat: cp.lat, lng: cp.lng }) * 1.35).toFixed(1);
+    const isRough = String(cp.corridor || '').includes('Rough');
+    return `
+      <tr>
+        <td><b>${escapeHtml(cp.name)}</b></td>
+        <td>${d} km</td>
+        <td><span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:0.75rem;font-weight:700;background:${isRough ? '#fdeceb;color:#a12d27' : '#e9f7ee;color:#1e6b34'};">${escapeHtml(cp.corridor || 'Custom')}</span></td>
+        <td>${cp.radius_km || 15} km</td>
+        <td><b style="color:var(--primary);font-size:1.05rem;">GHS ${Number(cp.fare).toFixed(2)}</b></td>
+        <td style="text-align:right;">
+          <button type="button" class="btn-action btn-edit btn-sm btn-cp-test" data-idx="${idx}" title="Test on Map"><i class="fa-solid fa-map-pin"></i> Test</button>
+          <button type="button" class="btn-action btn-save btn-sm btn-cp-edit" data-idx="${idx}" title="Edit Fare"><i class="fa-solid fa-pen"></i></button>
+          <button type="button" class="btn-action btn-delete btn-sm btn-cp-del" data-idx="${idx}" title="Delete"><i class="fa-solid fa-trash"></i></button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  tbody.querySelectorAll('.btn-cp-test').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const cp = list[btn.dataset.idx];
+      if (cp) testCheckpointOnMap(cp);
+    });
+  });
+  tbody.querySelectorAll('.btn-cp-edit').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const cp = list[btn.dataset.idx];
+      if (!cp) return;
+      const newFare = prompt(`Enter new accepted fare for ${cp.name} (GHS):`, cp.fare);
+      if (newFare !== null && !isNaN(parseFloat(newFare)) && parseFloat(newFare) > 0) {
+        cp.fare = Math.round(parseFloat(newFare));
+        saveCheckpoints(list);
+        updateFeeExamples();
+      }
+    });
+  });
+  tbody.querySelectorAll('.btn-cp-del').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const cp = list[btn.dataset.idx];
+      if (confirm(`Remove checkpoint for "${cp.name}"?`)) {
+        list.splice(btn.dataset.idx, 1);
+        saveCheckpoints(list);
+        updateFeeExamples();
+      }
+    });
+  });
+}
+
+let simMap = null;
+let simMarkerShop = null;
+let simMarkerDest = null;
+let simRouteLine = null;
+let simCurrentDest = null;
+
+function initSimulatorMap() {
+  const shopLat = parseFloat($('s-shop_lat')?.value) || 6.6966;
+  const shopLng = parseFloat($('s-shop_lng')?.value) || -1.6225;
+
+  if (!simMap && $('sim-map')) {
+    simMap = L.map('sim-map').setView([shopLat, shopLng], 8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(simMap);
+
+    const shopIcon = L.divIcon({
+      html: '<div style="background:#111;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);"><i class="fa-solid fa-store" style="font-size:14px;"></i></div>',
+      className: '',
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+    simMarkerShop = L.marker([shopLat, shopLng], { icon: shopIcon }).addTo(simMap);
+    simMarkerShop.bindTooltip('Point A: KD Wisdom Shop (Kejetia Market)').openTooltip();
+
+    simMap.on('click', async (e) => {
+      let placeName = 'Selected Map Pin';
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&zoom=14&lat=${e.latlng.lat}&lon=${e.latlng.lng}`);
+        const d = await r.json();
+        if (d && d.display_name) placeName = d.display_name.split(',').slice(0, 3).join(', ').trim();
+      } catch(err) {}
+      runRouteSimulation(e.latlng.lat, e.latlng.lng, placeName);
+    });
+  }
+  setTimeout(() => { if (simMap) simMap.invalidateSize(); }, 200);
+}
+
+function runRouteSimulation(lat, lng, name) {
+  if (!simMap) initSimulatorMap();
+  const shopLat = parseFloat($('s-shop_lat')?.value) || 6.6966;
+  const shopLng = parseFloat($('s-shop_lng')?.value) || -1.6225;
+
+  const rawKm = distanceKm({ lat: shopLat, lng: shopLng }, { lat, lng }) * 1.35;
+  const km = Math.max(parseFloat(rawKm.toFixed(1)), 1);
+  const speedKmH = km > 35 ? 55 : (km > 15 ? 35 : 25);
+  const minutes = Math.max(Math.round((km / speedKmH) * 60), 10);
+  const hrs = Math.floor(minutes / 60), mins = minutes % 60;
+  const timeStr = hrs ? `${hrs} h ${mins} min` : `${mins} min`;
+
+  const corridorKey = detectCorridor(lat, lng, name);
+  let corridorLabel = 'Standard Intercity';
+  if (corridorKey === 'accra') corridorLabel = 'Greater Accra Highway (VIP/STC)';
+  else if (corridorKey === 'rough_road') corridorLabel = 'Rough Road Terrain (Wassa)';
+  else if (km <= 35) corridorLabel = 'Kumasi Local Dispatch';
+
+  const existingCp = matchCheckpoint(lat, lng, name);
+  let calcPresetFare = 0;
+  if (existingCp) {
+    calcPresetFare = existingCp.fare;
+    corridorLabel += ` [Active Checkpoint: ${existingCp.name}]`;
+  } else {
+    calcPresetFare = calcFee(km, minutes, lat, lng, name);
+  }
+
+  simCurrentDest = { lat, lng, name, km, minutes, fare: calcPresetFare, corridor: corridorLabel };
+
+  if (simMarkerDest) simMap.removeLayer(simMarkerDest);
+  const destIcon = L.divIcon({
+    html: '<div style="background:#e74c3c;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.3);"><i class="fa-solid fa-location-dot" style="font-size:16px;"></i></div>',
+    className: '',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16]
+  });
+  simMarkerDest = L.marker([lat, lng], { icon: destIcon }).addTo(simMap);
+  simMarkerDest.bindTooltip(`Point B: ${name} (${km} km)`).openTooltip();
+
+  if (simRouteLine) simMap.removeLayer(simRouteLine);
+  simRouteLine = L.polyline([[shopLat, shopLng], [lat, lng]], { color: '#e67e22', weight: 4, dashArray: '6, 8' }).addTo(simMap);
+  simMap.fitBounds(L.latLngBounds([[shopLat, shopLng], [lat, lng]]), { padding: [50, 50] });
+
+  $('sim-stat-km').textContent = `${km} km`;
+  $('sim-stat-time').textContent = timeStr;
+  $('sim-stat-corridor').textContent = corridorLabel;
+  $('sim-stat-preset').textContent = `GHS ${Number(calcPresetFare).toFixed(2)}`;
+
+  $('sim-cp-name').value = name || 'Custom Area';
+  $('sim-cp-fare').value = existingCp ? existingCp.fare : calcPresetFare;
+  $('sim-cp-feedback').textContent = existingCp
+    ? `📍 Matches active checkpoint "${existingCp.name}". You can update the fare below.`
+    : `Calculated from preset formulas. If actual station fare is different, improvise above and save.`;
+}
+
+function testCheckpointOnMap(cp) {
+  runRouteSimulation(cp.lat, cp.lng, cp.name);
+  if ($('sim-map')) {
+    window.scrollTo({ top: $('sim-map').getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+  }
+}
+
+async function loadTransportTab() {
+  if (!settings) await loadSettings();
+  renderCheckpointsTable();
+  initSimulatorMap();
+}
+
+// Checkpoint and Simulator event listeners
+$('btn-save-checkpoint')?.addEventListener('click', () => {
+  if (!simCurrentDest) return alert('Please select a destination on the map or click a quick town chip first.');
+  const name = $('sim-cp-name').value.trim();
+  const fare = parseFloat($('sim-cp-fare').value);
+  const radius = parseFloat($('sim-cp-radius')?.value) || 15;
+  if (!name) return alert('Please enter a town or checkpoint name.');
+  if (isNaN(fare) || fare <= 0) return alert('Please enter a valid fare in GHS.');
+
+  const list = getSavedCheckpoints();
+  const existingIdx = list.findIndex((c) => c.name.toLowerCase() === name.toLowerCase() || (Math.abs(c.lat - simCurrentDest.lat) < 0.05 && Math.abs(c.lng - simCurrentDest.lng) < 0.05));
+  const newCp = {
+    id: 'cp-' + Date.now(),
+    name,
+    lat: simCurrentDest.lat,
+    lng: simCurrentDest.lng,
+    radius_km: radius,
+    fare: Math.round(fare),
+    corridor: simCurrentDest.corridor,
+    keywords: [name.toLowerCase().replace(/[^a-z0-9]/g, ' ').trim()]
+  };
+
+  if (existingIdx > -1) {
+    list[existingIdx] = { ...list[existingIdx], ...newCp, id: list[existingIdx].id };
+  } else {
+    list.unshift(newCp);
+  }
+  saveCheckpoints(list);
+  updateFeeExamples();
+  $('sim-cp-feedback').textContent = `✅ Checkpoint saved! Deliveries to "${name}" will now automatically quote GHS ${fare.toFixed(2)}.`;
+});
+
+$('btn-reset-checkpoints')?.addEventListener('click', () => {
+  if (confirm('Restore the default Ghana checkpoints (Accra, Gyapa, Wassa Akropong, Takoradi, Sunyani, Tamale, Cape Coast)?')) {
+    saveCheckpoints([...DEFAULT_CHECKPOINTS]);
+    updateFeeExamples();
+    alert('Default checkpoints restored.');
+  }
+});
+
+document.querySelectorAll('#sim-quick-chips .color-chip').forEach((chip) => {
+  chip.addEventListener('click', () => {
+    const lat = parseFloat(chip.dataset.lat);
+    const lng = parseFloat(chip.dataset.lng);
+    const name = chip.dataset.name;
+    runRouteSimulation(lat, lng, name);
+  });
+});
+
+async function searchSimDest() {
+  const q = $('sim-dest-search').value.trim();
+  const list = $('sim-dest-results');
+  if (q.length < 2) return;
+  list.className = 'shop-results show';
+  list.innerHTML = '<li>Searching towns in Ghana...</li>';
+  try {
+    const near = { lat: parseFloat($('s-shop_lat')?.value) || 6.6966, lng: parseFloat($('s-shop_lng')?.value) || -1.6225 };
+    const results = await searchPlaces(q, near, 'Ghana');
+    if (!results.length) { list.innerHTML = '<li>No place found. Try another town name or tap the map.</li>'; return; }
+    list.innerHTML = '';
+    results.forEach((p) => {
+      const li = document.createElement('li');
+      li.textContent = p.name;
+      li.addEventListener('click', () => {
+        list.className = 'shop-results';
+        $('sim-dest-search').value = p.name.split(',').slice(0, 2).join(', ').trim();
+        runRouteSimulation(p.lat, p.lng, p.name.split(',')[0].trim());
+      });
+      list.appendChild(li);
+    });
+  } catch(e) {
+    list.innerHTML = '<li>Search failed. Please tap the map instead.</li>';
+  }
+}
+$('sim-dest-btn')?.addEventListener('click', searchSimDest);
+$('sim-dest-search')?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); searchSimDest(); } });

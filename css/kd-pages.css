@@ -81,6 +81,26 @@ a { color: inherit; text-decoration: none; }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .link-btn { background: none; border: none; color: var(--accent-hover); cursor: pointer; font-family: inherit; font-size: 0.85rem; text-decoration: underline; }
 
+/* Google OAuth */
+.oauth-divider {
+  display: flex; align-items: center; margin: 18px 0; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px;
+}
+.oauth-divider::before, .oauth-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border-color);
+}
+.oauth-divider span { padding: 0 12px; }
+
+.btn-google {
+  background: #ffffff; color: #3c4043; border: 1px solid #dadce0; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  letter-spacing: 0.5px; text-transform: none; font-size: 0.9rem;
+  box-shadow: 0 1px 3px rgba(60,64,67,0.08); transition: all 0.2s ease;
+}
+.btn-google:hover {
+  background: #f8f9fa; border-color: #c6c9ce; box-shadow: 0 2px 6px rgba(60,64,67,0.15); color: #202124;
+}
+.btn-google svg { flex-shrink: 0; width: 18px; height: 18px; }
+
 /* Tabs */
 .tabs { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 22px; }
 .tabs button {

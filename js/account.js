@@ -61,6 +61,42 @@ $('login-form').addEventListener('submit', async (e) => {
   else init();
 });
 
+// ---------- Google Sign-In (OAuth) ----------
+async function signInWithGoogle() {
+  const next = nextPage();
+  const redirectTo = new URL('account.html' + (next ? '?next=' + encodeURIComponent(next) : ''), location.origin).href;
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'select_account',
+      }
+    }
+  });
+  if (error) showAlert('auth-alert', error.message);
+}
+
+$('btn-google-login')?.addEventListener('click', signInWithGoogle);
+$('btn-google-signup')?.addEventListener('click', signInWithGoogle);
+
+async function ensureProfile(user) {
+  if (!user) return;
+  try {
+    const { data: prof } = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle();
+    if (!prof) {
+      const meta = user.user_metadata || {};
+      await supabase.from('profiles').insert({
+        id: user.id,
+        full_name: meta.full_name || meta.name || '',
+        phone: meta.phone || '',
+        updated_at: new Date().toISOString()
+      });
+    }
+  } catch(e) {}
+}
+
 // ---------- Password Visibility Toggle & Validation Helpers ----------
 function initPasswordToggles() {
   document.querySelectorAll('.btn-pw-toggle').forEach((btn) => {
@@ -330,6 +366,13 @@ async function init() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) { showView('auth'); return; }
   currentUser = session.user;
+  await ensureProfile(currentUser);
+  const next = nextPage();
+  if (next && !sessionStorage.getItem('kd_oauth_next_done')) {
+    sessionStorage.setItem('kd_oauth_next_done', '1');
+    location.href = next;
+    return;
+  }
   showView('profile');
   await loadProfile();
   loadOrders();
