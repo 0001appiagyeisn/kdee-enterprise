@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.kdwisdomenterprise.app",
+      "sha256_cert_fingerprints": [
+        "C7:5B:2C:E0:9E:BB:7C:66:4A:84:5F:13:C6:71:74:7D:84:5D:27:B9:99:5E:B3:DD:48:B4:0C:D7:3A:BD:C1:30"
+      ]
+    }
+  }
+]
+
